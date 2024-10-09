@@ -1,0 +1,43 @@
+name: Fuzz Tests
+on: [push]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  fuzz:
+    strategy:
+      matrix:
+        go-version: [1.23.x]
+        platform: [ubuntu-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@91182cccc01eb5e619899d80e4e971d6181294a7 # v2.10.1
+      with:
+        egress-policy: audit
+
+    - name: Install Go
+      uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
+      with:
+        go-version: ${{ matrix.go-version }}
+    - name: Checkout code
+      uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4.2.0
+    - name: All Fuzz Tests
+      working-directory: .
+      run: |
+        files=$(grep -r --include='**_test.go' --files-with-matches 'func Fuzz' .)
+        for file in ${files}
+        do
+            funcs=$(grep -oP 'func \K(Fuzz\w*)' $file)
+            for func in ${funcs}
+            do
+                echo "Fuzzing $func in $file"
+                parentDir=$(dirname $file)
+                go test $parentDir -run=$func -fuzz=$func -fuzztime=5s
+            done
+        done
