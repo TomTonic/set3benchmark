@@ -1,4 +1,4 @@
-package main
+package set3benchmark
 
 import (
 	"reflect"
@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/TomTonic/Set3/benchmark"
 	"github.com/loov/hrtime"
 	"github.com/stretchr/testify/assert"
 )
@@ -29,8 +28,8 @@ func TestTime(t *testing.T) {
 			deltas = append(deltas, float64(di))
 		}
 	}
-	median := benchmark.Median(deltas)
-	assert.True(t, benchmark.FloatsEqualWithTolerance(reportedPrecision, median, 0.001), "reportedPrecision and median differ (%f!=%f @%f%% tolerance)", reportedPrecision, median, 0.001)
+	median := Median(deltas)
+	assert.True(t, FloatsEqualWithTolerance(reportedPrecision, median, 0.001), "reportedPrecision and median differ (%f!=%f @%f%% tolerance)", reportedPrecision, median, 0.001)
 	// hist := hrtime.NewHistogram(deltas, &defaultOptions)
 	// fmt.Printf(hist.String())
 }

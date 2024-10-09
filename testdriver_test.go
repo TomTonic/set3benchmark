@@ -1,4 +1,4 @@
-package benchmark
+package set3benchmark
 
 import (
 	"fmt"
