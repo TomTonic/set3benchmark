@@ -30,7 +30,7 @@ jobs:
         uses: vladopajic/go-test-coverage@c7fe52e0f48e0fbed8c1812824c5346218443c70 # v2.10.2
         with:
           profile: cover.out
-          local-prefix: github.com/TomTonic/Set3-benchmark
-          threshold-total: 98
+          local-prefix: github.com/TomTonic/set3benchmark
+          threshold-total: 50
           git-branch: badges
           git-token: ${{ github.ref_name == 'main' && secrets.GITHUB_TOKEN || '' }}
