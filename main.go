@@ -105,7 +105,7 @@ func (p *Step) Set(value string) error {
 		if err != nil {
 			return err
 		}
-		p.integerStep = uint32(parsedValue)
+		p.integerStep = uint32(parsedValue) // #nosec G115
 		p.isSet = true
 	}
 	return nil
@@ -130,13 +130,12 @@ func getNumberOfSteps(setSizeTo uint32, step Step) uint32 {
 			count++
 		}
 		return count
-	} else {
-		numberOfSteps := setSizeTo / step.integerStep
-		if setSizeTo%step.integerStep != 0 {
-			numberOfSteps += 1
-		}
-		return numberOfSteps + 1
 	}
+	numberOfSteps := setSizeTo / step.integerStep
+	if setSizeTo%step.integerStep != 0 {
+		numberOfSteps++
+	}
+	return numberOfSteps + 1
 }
 
 func columnHeadings(setSizeTo uint32, step Step) []string {
@@ -195,6 +194,14 @@ func main() {
 		step.integerStep = 1
 	}
 
+	if toSetSize < fromSetSize {
+		panic("to < from")
+	}
+
+	if toSetSize > 1<<28 {
+		panic("to too big")
+	}
+
 	totalAddsPerConfig := secondsPerConfig * (1_000_000_000.0 / float64(assumeAddNs))
 
 	fmt.Printf("Architecture:\t\t%s\n", runtime.GOARCH)
@@ -205,23 +212,23 @@ func main() {
 	fmt.Printf("Add()'s per round:\t%d\n", targetAddsPerRound)
 	fmt.Printf("Add()'s per config:\t%.0f (should result in a benchmarking time of %fs per config)\n", totalAddsPerConfig, secondsPerConfig)
 	fmt.Printf("Set3 sizes:\t\tfrom %d to %d, stepsize %v\n", fromSetSize, toSetSize, step.String())
-	numberOfStepsPerSetSize := getNumberOfSteps(uint32(toSetSize), step)
-	fmt.Printf("Number of configs:\t%d\n", numberOfStepsPerSetSize*uint32(toSetSize-fromSetSize+1))
-	totalduration := time.Duration(assumeAddNs * totalAddsPerConfig) // total ns per round
-	totalduration *= time.Duration(numberOfStepsPerSetSize)          // different headroom sizes per setSize
-	totalduration *= time.Duration(toSetSize - fromSetSize + 1)      // number of setSizes to evaluate
-	totalduration = time.Duration(float64(totalduration) * 1.12)     // overhead
+	numberOfStepsPerSetSize := getNumberOfSteps(uint32(toSetSize), step)                            // #nosec G115
+	fmt.Printf("Number of configs:\t%d\n", numberOfStepsPerSetSize*uint32(toSetSize-fromSetSize+1)) // #nosec G115
+	totalduration := time.Duration(assumeAddNs * totalAddsPerConfig)                                // total ns per round
+	totalduration *= time.Duration(numberOfStepsPerSetSize)                                         // different headroom sizes per setSize
+	totalduration *= time.Duration(toSetSize - fromSetSize + 1)                                     // #nosec G115
+	totalduration = time.Duration(float64(totalduration) * 1.12)                                    // overhead
 	fmt.Printf("Expected total runtime:\t%v (assumption: %fns per Add(prng.Uint64()) and 12%% overhead for housekeeping)\n", totalduration, assumeAddNs)
-	fmt.Printf("\n")
+	fmt.Print("\n")
 
 	start := time.Now()
 	defer printTotalRuntime(start)
 
 	fmt.Printf("setSize ")
 	for _, columnH := range columnHeadings(uint32(toSetSize), step) {
-		fmt.Printf(columnH)
+		fmt.Print(columnH)
 	}
-	fmt.Printf("\n")
+	fmt.Print("\n")
 	for currentSetSize := uint32(fromSetSize); currentSetSize <= uint32(toSetSize); currentSetSize++ {
 		fmt.Printf("%d ", currentSetSize)
 		for _, initSize := range initSizeValues(currentSetSize, uint32(toSetSize), step) {

@@ -66,8 +66,8 @@ func NewSearchDataDriver(setSize int, targetHitRatio float64, seed uint64) *Sear
 func (thisCfg *SearchDataDriver) NextSearchValue() uint64 {
 	x := uint64(float64(math.MaxUint64) * thisCfg.hitRatio)
 	rndVal := thisCfg.rng.Uint64()
-	upper32 := uint32(rndVal >> 32)
-	idx := upper32 % uint32(len(thisCfg.SetValues))
+	upper32 := uint32(rndVal >> 32)                 // #nosec G115
+	idx := upper32 % uint32(len(thisCfg.SetValues)) // #nosec G115
 	tableVal := thisCfg.SetValues[idx]
 	var result uint64
 	if thisCfg.rng.Uint64() < x {
