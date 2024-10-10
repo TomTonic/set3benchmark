@@ -45,14 +45,12 @@ func FloatsEqualWithTolerance(f1, f2, tolerancePercentage float64) bool {
 	absTol1 := math.Abs(f1 * tolerancePercentage / 100)
 	if f1-absTol1 <= f2 && f1+absTol1 >= f2 {
 		return true
-	} else {
-		absTol2 := math.Abs(f2 * tolerancePercentage / 100)
-		if f2-absTol2 <= f1 && f2+absTol2 >= f1 {
-			return true
-		} else {
-			return false
-		}
 	}
+	absTol2 := math.Abs(f2 * tolerancePercentage / 100)
+	if f2-absTol2 <= f1 && f2+absTol2 >= f1 {
+		return true
+	}
+	return false
 }
 
 /*

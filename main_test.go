@@ -29,9 +29,12 @@ func TestTime(t *testing.T) {
 		}
 	}
 	median := Median(deltas)
-	assert.True(t, FloatsEqualWithTolerance(reportedPrecision, median, 0.001), "reportedPrecision and median differ (%f!=%f @%f%% tolerance)", reportedPrecision, median, 0.001)
-	// hist := hrtime.NewHistogram(deltas, &defaultOptions)
-	// fmt.Printf(hist.String())
+	if median > float64(hrtime.Overhead()) {
+		// this assertion only makes sense it the measurement mechanism via hrtime.Now() is accurate enough
+		assert.True(t, FloatsEqualWithTolerance(reportedPrecision, median, 0.001), "reportedPrecision and median differ (%f!=%f @%f%% tolerance, Now()-overhead %v)", reportedPrecision, median, 0.001, hrtime.Overhead())
+		// hist := hrtime.NewHistogram(deltas, &defaultOptions)
+		// fmt.Printf(hist.String())
+	}
 }
 
 func TestDoBenchmark2(t *testing.T) {
