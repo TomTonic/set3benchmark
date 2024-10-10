@@ -225,13 +225,13 @@ func main() {
 	defer printTotalRuntime(start)
 
 	fmt.Printf("setSize ")
-	for _, columnH := range columnHeadings(uint32(toSetSize), step) {
+	for _, columnH := range columnHeadings(uint32(toSetSize), step) { // #nosec G115
 		fmt.Print(columnH)
 	}
 	fmt.Print("\n")
-	for currentSetSize := uint32(fromSetSize); currentSetSize <= uint32(toSetSize); currentSetSize++ {
+	for currentSetSize := uint32(fromSetSize); currentSetSize <= uint32(toSetSize); currentSetSize++ { // #nosec G115
 		fmt.Printf("%d ", currentSetSize)
-		for _, initSize := range initSizeValues(currentSetSize, uint32(toSetSize), step) {
+		for _, initSize := range initSizeValues(currentSetSize, uint32(toSetSize), step) { // #nosec G115
 			numOfSets := uint32(math.Round(float64(targetAddsPerRound) / float64(currentSetSize)))
 			actualAddsPerRound := numOfSets * currentSetSize // actualAddsPerRound ~ targetAddsPerRound
 			rounds := int(math.Round(totalAddsPerConfig / float64(actualAddsPerRound)))
