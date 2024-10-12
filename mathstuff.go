@@ -5,6 +5,31 @@ import (
 	"sort"
 )
 
+// see https://en.wikipedia.org/wiki/Xorshift#xorshift*
+// This PRNG is deterministic and has a period of 2^64-1. This way we can ensure, we always get a new 'random' number, that is unknown to the set.
+type PRNG struct {
+	State uint64
+	Round uint64 // for debugging purposes
+}
+
+func (thisState *PRNG) Uint64() uint64 {
+	x := thisState.State
+	x ^= x >> 12
+	x ^= x << 25
+	x ^= x >> 27
+	thisState.State = x
+	thisState.Round++
+	return x * 0x2545F4914F6CDD1D
+}
+
+/*
+func (thisState *prngState) Uint32() uint32 {
+	x := thisState.Uint64()
+	x >>= 32 // the upper 32 bit have better 'randomness', see https://en.wikipedia.org/wiki/Xorshift#xorshift*
+	return uint32(x)
+}
+*/
+
 func Median(data []float64) float64 {
 	if len(data) == 0 {
 		return 0
