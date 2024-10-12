@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	misc "github.com/TomTonic/set3benchmark/misc"
 	"github.com/loov/hrtime"
 	"github.com/stretchr/testify/assert"
 )
@@ -28,10 +29,10 @@ func TestTime(t *testing.T) {
 			deltas = append(deltas, float64(di))
 		}
 	}
-	median := Median(deltas)
+	median := misc.Median(deltas)
 	if median > float64(hrtime.Overhead()) {
 		// this assertion only makes sense it the measurement mechanism via hrtime.Now() is accurate enough
-		assert.True(t, FloatsEqualWithTolerance(reportedPrecision, median, 0.001), "reportedPrecision and median differ (%f!=%f @%f%% tolerance, Now()-overhead %v)", reportedPrecision, median, 0.001, hrtime.Overhead())
+		assert.True(t, misc.FloatsEqualWithTolerance(reportedPrecision, median, 0.001), "reportedPrecision and median differ (%f!=%f @%f%% tolerance, Now()-overhead %v)", reportedPrecision, median, 0.001, hrtime.Overhead())
 		// hist := hrtime.NewHistogram(deltas, &defaultOptions)
 		// fmt.Printf(hist.String())
 	}

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	set3 "github.com/TomTonic/Set3"
+	misc "github.com/TomTonic/set3benchmark/misc"
 	"github.com/loov/hrtime"
 )
 
@@ -18,7 +19,7 @@ var rngOverhead = getPRNGOverhead()
 
 func getPRNGOverhead() float64 {
 	calibrationCalls := 1_000_000_000 // prng.Uint64() is about 1-2ns, timer resolution is 100ns (windows)
-	prng := PRNG{State: 0x1234567890abcde}
+	prng := misc.PRNG{State: 0x1234567890abcde}
 	start := hrtime.Now()
 	for i := 0; i < calibrationCalls; i++ {
 		prng.Uint64()
@@ -30,7 +31,7 @@ func getPRNGOverhead() float64 {
 }
 
 func addBenchmark(rounds int, numberOfSets, initialAlloc, setSize uint32, seed uint64) (measurements []time.Duration) {
-	prng := PRNG{State: seed}
+	prng := misc.PRNG{State: seed}
 	set := make([]*set3.Set3[uint64], numberOfSets)
 	for i := range numberOfSets {
 		set[i] = set3.EmptyWithCapacity[uint64](initialAlloc)
@@ -266,7 +267,7 @@ func main() {
 			rounds := int(math.Round(totalAddsPerConfig / float64(actualAddsPerRound)))
 			measurements := addBenchmark(rounds, numOfSets, initSize, currentSetSize, 0xABCDEF0123456789)
 			nsValues := toNSperAdd(measurements, actualAddsPerRound)
-			median := Median(nsValues)
+			median := misc.Median(nsValues)
 			fmt.Printf("%.3f ", median)
 		}
 		fmt.Printf("\n")
