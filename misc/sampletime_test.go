@@ -27,16 +27,17 @@ func TestGetPrecision(t *testing.T) {
 }
 
 func TestSampleTime(t *testing.T) {
+	voidvar := int64(17)
 	t1 := SampleTime()
-	SampleTime()
+	voidvar ^= SampleTime()
 	t1a := time.Now()
 	time.Sleep(3*time.Second + 30*time.Millisecond)
 	t2 := SampleTime()
-	time.Now()
+	voidvar ^= int64(time.Now().UnixNano())
 	t2a := time.Now()
 
 	diff := DiffTimeStamps(t1, t2)
 	diffa := t2a.Sub(t1a)
 	aboutEqual := FloatsEqualWithTolerance(float64(diff), float64(diffa), 0.1)
-	assert.True(t, aboutEqual, "values diverge to much: %v vs. %v", time.Duration(diff), diffa)
+	assert.True(t, aboutEqual, "values diverge to much: %v vs. %v (ignore:%d)", time.Duration(diff), diffa, voidvar)
 }

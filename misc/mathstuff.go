@@ -46,7 +46,7 @@ func Median(data []float64) float64 {
 }
 
 func Statistics(data []float64) (mean, variance, stddev float64) {
-	if data == nil || len(data) == 0 {
+	if len(data) == 0 {
 		return 0, -1, -1
 	}
 

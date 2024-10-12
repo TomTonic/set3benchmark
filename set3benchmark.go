@@ -57,13 +57,14 @@ func addBenchmark(rounds int, numberOfSets, initialAlloc, setSize uint32, seed u
 	return timePerRound
 }
 
-var defaultOptions = hrtime.HistogramOptions{
-	BinCount:        10,
-	NiceRange:       true,
-	ClampMaximum:    0,
-	ClampPercentile: 0.95,
-}
-
+/*
+	var defaultOptions = hrtime.HistogramOptions{
+		BinCount:        10,
+		NiceRange:       true,
+		ClampMaximum:    0,
+		ClampPercentile: 0.95,
+	}
+*/
 func toNSperAdd(measurements []time.Duration, addsPerRound uint32) []float64 {
 	result := make([]float64, len(measurements))
 	div := 1.0 / float64(addsPerRound)
