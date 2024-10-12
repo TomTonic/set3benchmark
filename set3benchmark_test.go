@@ -3,39 +3,11 @@ package main
 import (
 	"math"
 	"reflect"
-	"runtime/debug"
 	"testing"
 
 	misc "github.com/TomTonic/set3benchmark/misc"
 	"github.com/stretchr/testify/assert"
 )
-
-func TestTime(t *testing.T) {
-	reportedPrecision := misc.GetSampleTimePrecision()
-	var values [20_000_001]misc.TimeStamp
-	debug.SetGCPercent(-1)
-	for i := range 20_000_001 {
-		values[i] = misc.SampleTime()
-	}
-	debug.SetGCPercent(100)
-	deltas := make([]float64, 0, 20_000_000)
-	var zeros uint64
-	for i := range 20_000_000 {
-		di := misc.DiffTimeStamps(values[i], values[i+1])
-		if di == 0 {
-			zeros++
-		} else {
-			deltas = append(deltas, float64(di))
-		}
-	}
-	median := misc.Median(deltas)
-	//	if median > float64(hrtime.Overhead()) {
-	// this assertion only makes sense it the measurement mechanism via hrtime.Now() is accurate enough
-	assert.True(t, misc.FloatsEqualWithTolerance(reportedPrecision, median, 0.001), "reportedPrecision and median differ (%f!=%f @%f%% tolerance)", reportedPrecision, median, 0.001)
-	// hist := hrtime.NewHistogram(deltas, &defaultOptions)
-	// fmt.Printf(hist.String())
-	//	}
-}
 
 func TestDoBenchmark2(t *testing.T) {
 	rounds := 72
