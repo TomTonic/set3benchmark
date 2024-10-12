@@ -1,0 +1,4 @@
+run:
+  paths:
+    - ./misc
+    - ./
