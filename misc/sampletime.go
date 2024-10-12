@@ -7,15 +7,22 @@ import (
 
 type TimeStamp = int64
 
+const iterationsForCallibration = 10_000_000
+
 var (
 	minTimeSample = calcMinTimeSample()
-	avgCallTime   = calcAgvCallTime()
-	precision     = calcPrecision(minTimeSample, avgCallTime)
+	medCallTime   = calcMedCallTime()
+	precision     = calcPrecision(minTimeSample, medCallTime)
 )
 
 // Returns the precision of time measurements obtained via SampleTime() on the runtime system in nanoseconds.
-func GetPrecision() float64 {
+func GetSampleTimePrecision() float64 {
 	return precision
+}
+
+// Returns the median runtime of of one call of SampleTime() on the runtime system in nanoseconds.
+func GetSampleTimeRuntime() float64 {
+	return medCallTime
 }
 
 func calcPrecision(minTimeSample int64, avgCallTime float64) float64 {
@@ -26,10 +33,9 @@ func calcPrecision(minTimeSample int64, avgCallTime float64) float64 {
 }
 
 func calcMinTimeSample() int64 {
-	const iterations = 5_000_000
 	var minDiff = int64(math.MaxInt64) // initial large value
 
-	for i := 0; i < iterations; i++ {
+	for i := 0; i < iterationsForCallibration; i++ {
 		t1 := SampleTime()
 		t2 := SampleTime()
 		diff := DiffTimeStamps(t1, t2)
@@ -41,19 +47,23 @@ func calcMinTimeSample() int64 {
 	return minDiff
 }
 
-func calcAgvCallTime() float64 {
-	const iterations = 5_000_000
-	xval := int64(1)
-
+func calcMedCallTime() float64 {
+	var values [iterationsForCallibration + 1]TimeStamp
 	debug.SetGCPercent(-1)
-	t1 := SampleTime()
-	for i := 0; i < iterations; i++ {
-		xval ^= SampleTime()
+	for i := range iterationsForCallibration + 1 {
+		values[i] = SampleTime()
 	}
-	t2 := SampleTime()
 	debug.SetGCPercent(100)
-	diff := float64(DiffTimeStamps(t1, t2))
-	result := diff / float64(iterations)
-
-	return result
+	deltas := make([]float64, 0, iterationsForCallibration)
+	var zeros uint64
+	for i := range iterationsForCallibration {
+		di := DiffTimeStamps(values[i], values[i+1])
+		if di == 0 {
+			zeros++
+		} else {
+			deltas = append(deltas, float64(di))
+		}
+	}
+	median := Median(deltas)
+	return median
 }

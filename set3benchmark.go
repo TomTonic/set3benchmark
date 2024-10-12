@@ -12,7 +12,7 @@ import (
 
 	set3 "github.com/TomTonic/Set3"
 	misc "github.com/TomTonic/set3benchmark/misc"
-	"github.com/loov/hrtime"
+	//	"github.com/loov/hrtime"
 )
 
 var rngOverhead = getPRNGOverhead()
@@ -20,23 +20,24 @@ var rngOverhead = getPRNGOverhead()
 func getPRNGOverhead() float64 {
 	calibrationCalls := 1_000_000_000 // prng.Uint64() is about 1-2ns, timer resolution is 100ns (windows)
 	prng := misc.PRNG{State: 0x1234567890abcde}
-	start := hrtime.Now()
+	start := misc.SampleTime()
 	for i := 0; i < calibrationCalls; i++ {
 		prng.Uint64()
 	}
-	stop := hrtime.Now()
-	nowOverhead := hrtime.Overhead()
-	result := float64(stop-start-nowOverhead) / float64(calibrationCalls)
+	stop := misc.SampleTime()
+	diff := float64(misc.DiffTimeStamps(start, stop))
+	nowOverhead := misc.GetSampleTimeRuntime()
+	result := (diff - nowOverhead) / float64(calibrationCalls)
 	return result
 }
 
-func addBenchmark(rounds int, numberOfSets, initialAlloc, setSize uint32, seed uint64) (measurements []time.Duration) {
+func addBenchmark(rounds int, numberOfSets, initialAlloc, setSize uint32, seed uint64) (measurements []float64) {
 	prng := misc.PRNG{State: seed}
 	set := make([]*set3.Set3[uint64], numberOfSets)
 	for i := range numberOfSets {
 		set[i] = set3.EmptyWithCapacity[uint64](initialAlloc)
 	}
-	timePerRound := make([]time.Duration, rounds)
+	timePerRound := make([]float64, rounds)
 	runtime.GC()
 	debug.SetGCPercent(-1)
 	defer debug.SetGCPercent(100)
@@ -44,15 +45,16 @@ func addBenchmark(rounds int, numberOfSets, initialAlloc, setSize uint32, seed u
 		for s := range numberOfSets {
 			set[s].Clear()
 		}
-		startTime := hrtime.Now()
+		startTime := misc.SampleTime()
 		for s := range numberOfSets {
 			currentSet := set[s]
 			for range setSize {
 				currentSet.Add(prng.Uint64())
 			}
 		}
-		endTime := hrtime.Now()
-		timePerRound[r] = endTime - startTime - hrtime.Overhead() - time.Duration((rngOverhead * float64(numberOfSets*setSize)))
+		endTime := misc.SampleTime()
+		diff := float64(misc.DiffTimeStamps(startTime, endTime))
+		timePerRound[r] = diff - misc.GetSampleTimeRuntime() - (rngOverhead * float64(numberOfSets*setSize))
 	}
 	return timePerRound
 }
@@ -65,7 +67,7 @@ func addBenchmark(rounds int, numberOfSets, initialAlloc, setSize uint32, seed u
 		ClampPercentile: 0.95,
 	}
 */
-func toNSperAdd(measurements []time.Duration, addsPerRound uint32) []float64 {
+func toNanoSecondsPerAdd(measurements []float64, addsPerRound uint32) []float64 {
 	result := make([]float64, len(measurements))
 	div := 1.0 / float64(addsPerRound)
 	for i, m := range measurements {
@@ -175,30 +177,6 @@ func initSizeValues(currentSetSize, setSizeTo uint32, step Step) []uint32 {
 	return result
 }
 
-func getMinHrtimeNow() int64 {
-	const iterations = 1_000_000
-	var minDiff time.Duration = time.Hour // initial large value
-
-	for i := 0; i < iterations; i++ {
-		t1 := hrtime.Now()
-		t2 := hrtime.Now()
-		diff := t2 - t1
-		if diff > 0 && diff < minDiff {
-			minDiff = diff
-		}
-	}
-
-	return int64(minDiff)
-}
-
-func getTimerPrecision() uint64 {
-	resolution := float64(hrtime.NowPrecision()) // usually 1ns on x64 Linux and WSL, 100ns on x64/Windows
-	accesstime := float64(getMinHrtimeNow())     // usually somewhere in the region of 30ns
-	// see https://learn.microsoft.com/en-us/windows/win32/sysinfo/acquiring-high-resolution-time-stamps#low-level-hardware-clock-characteristics
-	precision := math.Max(resolution, accesstime)
-	return uint64(math.Ceil(precision))
-}
-
 func main() {
 	var fromSetSize, toSetSize, targetAddsPerRound uint
 	var assumeAddNs, secondsPerConfig float64
@@ -232,11 +210,11 @@ func main() {
 
 	fmt.Printf("Architecture:\t\t\t\t%s\n", runtime.GOARCH)
 	fmt.Printf("OS:\t\t\t\t\t%s\n", runtime.GOOS)
-	fmt.Printf("Max timer precision:\t\t\t%dns\n", getTimerPrecision())
-	fmt.Printf("Avg hrtime.Now() runtime:\t\t%v (informative, already subtracted from below measurement values)\n", hrtime.Overhead())
+	fmt.Printf("Max timer precision:\t\t\t%.2fns\n", misc.GetSampleTimePrecision())
+	fmt.Printf("Avg SampleTime() runtime:\t\t%v (informative, already subtracted from below measurement values)\n", misc.GetSampleTimeRuntime())
 	fmt.Printf("Avg prng.Uint64() runtime:\t\t%fns (informative, already subtracted from below measurement values)\n", rngOverhead)
 	fmt.Printf("Assumed Add(prng.Uint64()) runtime:\t%fns\n", assumeAddNs)
-	quantizationError := float64(getTimerPrecision()*100) / (assumeAddNs * float64(targetAddsPerRound))
+	quantizationError := misc.GetSampleTimePrecision() * 100.0 / (assumeAddNs * float64(targetAddsPerRound))
 	fmt.Printf("Add()'s per round:\t\t\t%d (expect a quantization error of %.3f%%, i.e. %.3fns per Add)\n", targetAddsPerRound, quantizationError, quantizationError*assumeAddNs)
 	fmt.Printf("Add()'s per config:\t\t\t%.0f (should result in a benchmarking time of %.2fs per config)\n", totalAddsPerConfig, secondsPerConfig)
 	fmt.Printf("Set3 sizes:\t\t\t\tfrom %d to %d, stepsize %v\n", fromSetSize, toSetSize, step.String())
@@ -267,7 +245,7 @@ func main() {
 			actualAddsPerRound := numOfSets * currentSetSize // actualAddsPerRound ~ targetAddsPerRound
 			rounds := int(math.Round(totalAddsPerConfig / float64(actualAddsPerRound)))
 			measurements := addBenchmark(rounds, numOfSets, initSize, currentSetSize, 0xABCDEF0123456789)
-			nsValues := toNSperAdd(measurements, actualAddsPerRound)
+			nsValues := toNanoSecondsPerAdd(measurements, actualAddsPerRound)
 			median := misc.Median(nsValues)
 			fmt.Printf("%.3f ", median)
 		}

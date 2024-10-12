@@ -1,76 +1,13 @@
 package main
 
 import (
+	"math"
 	"reflect"
-	"runtime/debug"
 	"testing"
-	"time"
 
 	misc "github.com/TomTonic/set3benchmark/misc"
-	"github.com/loov/hrtime"
 	"github.com/stretchr/testify/assert"
 )
-
-func TestTime(t *testing.T) {
-	reportedPrecision := hrtime.NowPrecision()
-	var values [20_000_001]time.Duration
-	debug.SetGCPercent(-1)
-	for i := range 20_000_001 {
-		values[i] = hrtime.Now()
-	}
-	debug.SetGCPercent(100)
-	deltas := make([]float64, 0, 20_000_000)
-	var zeros uint64
-	for i := range 20_000_000 {
-		di := values[i+1] - values[i]
-		if di == 0 {
-			zeros++
-		} else {
-			deltas = append(deltas, float64(di))
-		}
-	}
-	median := misc.Median(deltas)
-	if median > float64(hrtime.Overhead()) {
-		// this assertion only makes sense it the measurement mechanism via hrtime.Now() is accurate enough
-		assert.True(t, misc.FloatsEqualWithTolerance(reportedPrecision, median, 0.001), "reportedPrecision and median differ (%f!=%f @%f%% tolerance, Now()-overhead %v)", reportedPrecision, median, 0.001, hrtime.Overhead())
-		// hist := hrtime.NewHistogram(deltas, &defaultOptions)
-		// fmt.Printf(hist.String())
-	}
-}
-
-func TestMinTimeNow(t *testing.T) {
-	const iterations = 1000000
-	var minDiff time.Duration = time.Hour // initial large value
-
-	t1 := time.Now()
-	for i := 0; i < iterations; i++ {
-		t2 := time.Now()
-		diff := t2.Sub(t1)
-		if diff > 0 && diff < minDiff {
-			minDiff = diff
-		}
-		t1 = time.Now()
-	}
-
-	t.Logf("Smallest measurabel time difference via time.Now(): %v\n", minDiff)
-}
-
-func TestMinHrtimeNow(t *testing.T) {
-	const iterations = 1000000
-	var minDiff time.Duration = time.Hour // initial large value
-
-	t1 := hrtime.Now()
-	for i := 0; i < iterations; i++ {
-		t2 := hrtime.Now()
-		diff := t2 - t1
-		if diff > 0 && diff < minDiff {
-			minDiff = diff
-		}
-		t1 = hrtime.Now()
-	}
-
-	t.Logf("Smallest measurabel time difference via hrtime.Now(): %v\n", minDiff)
-}
 
 func TestDoBenchmark2(t *testing.T) {
 	rounds := 72
@@ -84,12 +21,12 @@ func TestDoBenchmark2(t *testing.T) {
 	assert.False(t, containsZero(result), "Result should not contain zeros, but it does.")
 	assert.False(t, containsNegative(result), "Result should not contain negative numbers, but it does.")
 
-	reportedPrecision := hrtime.NowPrecision()
+	reportedPrecision := misc.GetSampleTimePrecision()
 	assert.True(t, atLeastNtimesPrecision(20.0, reportedPrecision, result),
 		"Result should only contain values that exceed %fx the timer precision of %fns, but it does not. The minimum Value is %v.", 20.0, reportedPrecision, minVal(result))
 }
 
-func containsZero(measurements []time.Duration) bool {
+func containsZero(measurements []float64) bool {
 	for _, d := range measurements {
 		if d == 0 {
 			return true
@@ -98,7 +35,7 @@ func containsZero(measurements []time.Duration) bool {
 	return false
 }
 
-func containsNegative(measurements []time.Duration) bool {
+func containsNegative(measurements []float64) bool {
 	for _, d := range measurements {
 		if d < 0 {
 			return true
@@ -107,17 +44,17 @@ func containsNegative(measurements []time.Duration) bool {
 	return false
 }
 
-func atLeastNtimesPrecision(nTimes float64, precision float64, measurements []time.Duration) bool {
+func atLeastNtimesPrecision(nTimes float64, precision float64, measurements []float64) bool {
 	for _, d := range measurements {
-		if float64(d) < precision*nTimes {
+		if d < precision*nTimes {
 			return false
 		}
 	}
 	return true
 }
 
-func minVal(measurements []time.Duration) time.Duration {
-	min := 48 * time.Hour
+func minVal(measurements []float64) float64 {
+	min := math.MaxFloat64
 	for _, d := range measurements {
 		if d < min {
 			min = d
@@ -247,20 +184,20 @@ func TestStep_String(t *testing.T) {
 
 func TestToNSperAdd(t *testing.T) {
 	tests := []struct {
-		measurements []time.Duration
+		measurements []float64
 		addsPerRound uint32
 		expected     []float64
 	}{
-		{[]time.Duration{time.Nanosecond * 10, time.Nanosecond * 20}, 2, []float64{5, 10}},
-		{[]time.Duration{time.Nanosecond * 100, time.Nanosecond * 200}, 4, []float64{25, 50}},
-		{[]time.Duration{time.Nanosecond * 0, time.Nanosecond * 50}, 5, []float64{0, 10}},
-		{[]time.Duration{time.Nanosecond * 1000}, 10, []float64{100}},
-		{[]time.Duration{}, 1, []float64{}},
+		{[]float64{10, 20}, 2, []float64{5, 10}},
+		{[]float64{100, 200}, 4, []float64{25, 50}},
+		{[]float64{0, 50}, 5, []float64{0, 10}},
+		{[]float64{1000}, 10, []float64{100}},
+		{[]float64{}, 1, []float64{}},
 	}
 
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
-			result := toNSperAdd(tt.measurements, tt.addsPerRound)
+			result := toNanoSecondsPerAdd(tt.measurements, tt.addsPerRound)
 			if len(result) != len(tt.expected) {
 				t.Errorf("got %v, want %v", result, tt.expected)
 			}
