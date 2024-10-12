@@ -14,16 +14,16 @@ func TestMinTimeSample(t *testing.T) {
 }
 
 func TestAvgCallTime(t *testing.T) {
-	t.Logf("AvgCallTime of test system: %fns", avgCallTime)
-	assert.True(t, avgCallTime >= 1, "AvgCallTime too small")
-	assert.True(t, avgCallTime < 1_000_000, "AvgCallTime too big")
+	t.Logf("AvgCallTime of test system: %fns", medCallTime)
+	assert.True(t, medCallTime >= 1, "AvgCallTime too small")
+	assert.True(t, medCallTime < 1_000_000, "AvgCallTime too big")
 }
 
 func TestGetPrecision(t *testing.T) {
 	p := GetSampleTimePrecision()
 	assert.True(t, p >= 1, "Precision too small")
 	assert.True(t, p < 1_000_000, "Precision too big")
-	assert.True(t, p == float64(minTimeSample) || p == avgCallTime, "Unexpected value: %f, %f, %f", p, float64(minTimeSample), avgCallTime)
+	assert.True(t, p == float64(minTimeSample) || p == medCallTime, "Unexpected value: %f, %f, %f", p, float64(minTimeSample), medCallTime)
 }
 
 func TestSampleTime(t *testing.T) {
