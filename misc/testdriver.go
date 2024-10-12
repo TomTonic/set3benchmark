@@ -1,47 +1,8 @@
-// Copyright 2024 TomTonic
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-package set3benchmark
+package misc
 
 import (
 	"math"
 )
-
-// see https://en.wikipedia.org/wiki/Xorshift#xorshift*
-// This PRNG is deterministic and has a period of 2^64-1. This way we can ensure, we always get a new 'random' number, that is unknown to the set.
-type PRNG struct {
-	State uint64
-	Round uint64 // for debugging purposes
-}
-
-func (thisState *PRNG) Uint64() uint64 {
-	x := thisState.State
-	x ^= x >> 12
-	x ^= x << 25
-	x ^= x >> 27
-	thisState.State = x
-	thisState.Round++
-	return x * 0x2545F4914F6CDD1D
-}
-
-/*
-func (thisState *prngState) Uint32() uint32 {
-	x := thisState.Uint64()
-	x >>= 32 // the upper 32 bit have better 'randomness', see https://en.wikipedia.org/wiki/Xorshift#xorshift*
-	return uint32(x)
-}
-*/
 
 type SearchDataDriver struct {
 	rng       *PRNG

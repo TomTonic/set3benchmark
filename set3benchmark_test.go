@@ -1,4 +1,4 @@
-package set3benchmark
+package main
 
 import (
 	"reflect"
@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	misc "github.com/TomTonic/set3benchmark/misc"
 	"github.com/loov/hrtime"
 	"github.com/stretchr/testify/assert"
 )
@@ -28,13 +29,47 @@ func TestTime(t *testing.T) {
 			deltas = append(deltas, float64(di))
 		}
 	}
-	median := Median(deltas)
+	median := misc.Median(deltas)
 	if median > float64(hrtime.Overhead()) {
 		// this assertion only makes sense it the measurement mechanism via hrtime.Now() is accurate enough
-		assert.True(t, FloatsEqualWithTolerance(reportedPrecision, median, 0.001), "reportedPrecision and median differ (%f!=%f @%f%% tolerance, Now()-overhead %v)", reportedPrecision, median, 0.001, hrtime.Overhead())
+		assert.True(t, misc.FloatsEqualWithTolerance(reportedPrecision, median, 0.001), "reportedPrecision and median differ (%f!=%f @%f%% tolerance, Now()-overhead %v)", reportedPrecision, median, 0.001, hrtime.Overhead())
 		// hist := hrtime.NewHistogram(deltas, &defaultOptions)
 		// fmt.Printf(hist.String())
 	}
+}
+
+func TestMinTimeNow(t *testing.T) {
+	const iterations = 1000000
+	var minDiff time.Duration = time.Hour // initial large value
+
+	t1 := time.Now()
+	for i := 0; i < iterations; i++ {
+		t2 := time.Now()
+		diff := t2.Sub(t1)
+		if diff > 0 && diff < minDiff {
+			minDiff = diff
+		}
+		t1 = time.Now()
+	}
+
+	t.Logf("Smallest measurabel time difference via time.Now(): %v\n", minDiff)
+}
+
+func TestMinHrtimeNow(t *testing.T) {
+	const iterations = 1000000
+	var minDiff time.Duration = time.Hour // initial large value
+
+	t1 := hrtime.Now()
+	for i := 0; i < iterations; i++ {
+		t2 := hrtime.Now()
+		diff := t2 - t1
+		if diff > 0 && diff < minDiff {
+			minDiff = diff
+		}
+		t1 = hrtime.Now()
+	}
+
+	t.Logf("Smallest measurabel time difference via hrtime.Now(): %v\n", minDiff)
 }
 
 func TestDoBenchmark2(t *testing.T) {
