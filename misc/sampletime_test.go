@@ -20,7 +20,7 @@ func TestAvgCallTime(t *testing.T) {
 }
 
 func TestGetPrecision(t *testing.T) {
-	p := GetPrecision()
+	p := GetSampleTimePrecision()
 	assert.True(t, p >= 1, "Precision too small")
 	assert.True(t, p < 1_000_000, "Precision too big")
 	assert.True(t, p == float64(minTimeSample) || p == avgCallTime, "Unexpected value: %f, %f, %f", p, float64(minTimeSample), avgCallTime)

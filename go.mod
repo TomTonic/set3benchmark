@@ -4,7 +4,6 @@ go 1.23.2
 
 require (
 	github.com/TomTonic/Set3 v0.4.0
-	github.com/loov/hrtime v1.0.3
 	github.com/stretchr/testify v1.9.0
 )
 

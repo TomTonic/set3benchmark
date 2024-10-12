@@ -14,8 +14,13 @@ var (
 )
 
 // Returns the precision of time measurements obtained via SampleTime() on the runtime system in nanoseconds.
-func GetPrecision() float64 {
+func GetSampleTimePrecision() float64 {
 	return precision
+}
+
+// Returns the average runtime of of one call of SampleTime() on the runtime system in nanoseconds.
+func GetSampleTimeRuntime() float64 {
+	return avgCallTime
 }
 
 func calcPrecision(minTimeSample int64, avgCallTime float64) float64 {
@@ -53,7 +58,7 @@ func calcAgvCallTime() float64 {
 	t2 := SampleTime()
 	debug.SetGCPercent(100)
 	diff := float64(DiffTimeStamps(t1, t2))
-	result := diff / float64(iterations)
+	result := diff / float64(iterations+1)
 
 	return result
 }
