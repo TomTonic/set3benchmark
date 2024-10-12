@@ -1,4 +1,4 @@
-package set3benchmark
+package main
 
 import (
 	"fmt"

@@ -1,4 +1,4 @@
-package set3benchmark
+package main
 
 import (
 	"flag"
@@ -17,7 +17,7 @@ import (
 var rngOverhead = getPRNGOverhead()
 
 func getPRNGOverhead() float64 {
-	calibrationCalls := 500_000_000 // prng.Uint64() is about 1-2ns, timer resolution is 100ns (windows)
+	calibrationCalls := 1_000_000_000 // prng.Uint64() is about 1-2ns, timer resolution is 100ns (windows)
 	prng := PRNG{State: 0x1234567890abcde}
 	start := hrtime.Now()
 	for i := 0; i < calibrationCalls; i++ {
@@ -173,14 +173,38 @@ func initSizeValues(currentSetSize, setSizeTo uint32, step Step) []uint32 {
 	return result
 }
 
+func getMinHrtimeNow() int64 {
+	const iterations = 1_000_000
+	var minDiff time.Duration = time.Hour // initial large value
+
+	for i := 0; i < iterations; i++ {
+		t1 := hrtime.Now()
+		t2 := hrtime.Now()
+		diff := t2 - t1
+		if diff > 0 && diff < minDiff {
+			minDiff = diff
+		}
+	}
+
+	return int64(minDiff)
+}
+
+func getTimerPrecision() uint64 {
+	resolution := float64(hrtime.NowPrecision()) // usually 1ns on x64 Linux and WSL, 100ns on x64/Windows
+	accesstime := float64(getMinHrtimeNow())     // usually somewhere in the region of 30ns
+	// see https://learn.microsoft.com/en-us/windows/win32/sysinfo/acquiring-high-resolution-time-stamps#low-level-hardware-clock-characteristics
+	precision := math.Max(resolution, accesstime)
+	return uint64(math.Ceil(precision))
+}
+
 func main() {
 	var fromSetSize, toSetSize, targetAddsPerRound uint
 	var assumeAddNs, secondsPerConfig float64
 
 	flag.UintVar(&fromSetSize, "from", 100, "First set size to benchmark (inclusive)")
 	flag.UintVar(&toSetSize, "to", 200, "Last set size to benchmark (inclusive)")
-	// 50_000 x ~8ns = ~400_000ns; Timer resolution 100ns (Windows) => 0,25% error, i.e. 0,02ns per Add()
-	flag.UintVar(&targetAddsPerRound, "apr", 50_000, "AddsPerRound - instructions between two measurements. Balance between memory consumption (cache!) and timer resolution (Windows: 100ns)")
+	// 50_000 x ~8ns = ~400_000ns; Timer precision 100ns (Windows) => 0,025% error, i.e. 0,02ns per Add()
+	flag.UintVar(&targetAddsPerRound, "apr", 50_000, "AddsPerRound - instructions between two measurements. Balance between memory consumption (cache!) and timer precision (Windows: 100ns)")
 	flag.Float64Var(&secondsPerConfig, "spc", 1.0, "SecondsPerConfig - estimated benchmark time per configuration in seconds")
 	flag.Float64Var(&assumeAddNs, "arpa", 8.0, "AssumedRuntimePerAdd - in nanoseconds per instruction. Used to predcict runtimes")
 	var step Step
@@ -204,21 +228,23 @@ func main() {
 
 	totalAddsPerConfig := secondsPerConfig * (1_000_000_000.0 / float64(assumeAddNs))
 
-	fmt.Printf("Architecture:\t\t%s\n", runtime.GOARCH)
-	fmt.Printf("OS:\t\t\t%s\n", runtime.GOOS)
-	fmt.Printf("Timer precision:\t%fns\n", hrtime.NowPrecision())
-	fmt.Printf("hrtime.Now() overhead:\t%v (informative, already subtracted from below measurement values)\n", hrtime.Overhead())
-	fmt.Printf("prng.Uint64() overhead:\t%fns (informative, already subtracted from below measurement values)\n", rngOverhead)
-	fmt.Printf("Add()'s per round:\t%d\n", targetAddsPerRound)
-	fmt.Printf("Add()'s per config:\t%.0f (should result in a benchmarking time of %fs per config)\n", totalAddsPerConfig, secondsPerConfig)
-	fmt.Printf("Set3 sizes:\t\tfrom %d to %d, stepsize %v\n", fromSetSize, toSetSize, step.String())
-	numberOfStepsPerSetSize := getNumberOfSteps(uint32(toSetSize), step)                            // #nosec G115
-	fmt.Printf("Number of configs:\t%d\n", numberOfStepsPerSetSize*uint32(toSetSize-fromSetSize+1)) // #nosec G115
-	totalduration := time.Duration(assumeAddNs * totalAddsPerConfig)                                // total ns per round
-	totalduration *= time.Duration(numberOfStepsPerSetSize)                                         // different headroom sizes per setSize
-	totalduration *= time.Duration(toSetSize - fromSetSize + 1)                                     // #nosec G115
-	totalduration = time.Duration(float64(totalduration) * 1.12)                                    // overhead
-	fmt.Printf("Expected total runtime:\t%v (assumption: %fns per Add(prng.Uint64()) and 12%% overhead for housekeeping)\n", totalduration, assumeAddNs)
+	fmt.Printf("Architecture:\t\t\t\t%s\n", runtime.GOARCH)
+	fmt.Printf("OS:\t\t\t\t\t%s\n", runtime.GOOS)
+	fmt.Printf("Max timer precision:\t\t\t%dns\n", getTimerPrecision())
+	fmt.Printf("Avg hrtime.Now() runtime:\t\t%v (informative, already subtracted from below measurement values)\n", hrtime.Overhead())
+	fmt.Printf("Avg prng.Uint64() runtime:\t\t%fns (informative, already subtracted from below measurement values)\n", rngOverhead)
+	fmt.Printf("Assumed Add(prng.Uint64()) runtime:\t%fns\n", assumeAddNs)
+	quantizationError := float64(getTimerPrecision()*100) / (assumeAddNs * float64(targetAddsPerRound))
+	fmt.Printf("Add()'s per round:\t\t\t%d (expect a quantization error of %.3f%%, i.e. %.3fns per Add)\n", targetAddsPerRound, quantizationError, quantizationError*assumeAddNs)
+	fmt.Printf("Add()'s per config:\t\t\t%.0f (should result in a benchmarking time of %.2fs per config)\n", totalAddsPerConfig, secondsPerConfig)
+	fmt.Printf("Set3 sizes:\t\t\t\tfrom %d to %d, stepsize %v\n", fromSetSize, toSetSize, step.String())
+	numberOfStepsPerSetSize := getNumberOfSteps(uint32(toSetSize), step)                                // #nosec G115
+	fmt.Printf("Number of configs:\t\t\t%d\n", numberOfStepsPerSetSize*uint32(toSetSize-fromSetSize+1)) // #nosec G115
+	totalduration := time.Duration(assumeAddNs * totalAddsPerConfig)                                    // total ns per round
+	totalduration *= time.Duration(numberOfStepsPerSetSize)                                             // different headroom sizes per setSize
+	totalduration *= time.Duration(toSetSize - fromSetSize + 1)                                         // #nosec G115
+	totalduration = time.Duration(float64(totalduration) * 1.12)                                        // overhead
+	fmt.Printf("Expected total runtime:\t\t\t%v (assumption: %fns per Add(prng.Uint64()) and 12%% overhead for housekeeping)\n", totalduration, assumeAddNs)
 	fmt.Print("\n")
 
 	start := time.Now()

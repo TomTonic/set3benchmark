@@ -1,4 +1,4 @@
-package set3benchmark
+package main
 
 import (
 	"reflect"
@@ -35,6 +35,40 @@ func TestTime(t *testing.T) {
 		// hist := hrtime.NewHistogram(deltas, &defaultOptions)
 		// fmt.Printf(hist.String())
 	}
+}
+
+func TestMinTimeNow(t *testing.T) {
+	const iterations = 1000000
+	var minDiff time.Duration = time.Hour // initial large value
+
+	t1 := time.Now()
+	for i := 0; i < iterations; i++ {
+		t2 := time.Now()
+		diff := t2.Sub(t1)
+		if diff > 0 && diff < minDiff {
+			minDiff = diff
+		}
+		t1 = time.Now()
+	}
+
+	t.Logf("Smallest measurabel time difference via time.Now(): %v\n", minDiff)
+}
+
+func TestMinHrtimeNow(t *testing.T) {
+	const iterations = 1000000
+	var minDiff time.Duration = time.Hour // initial large value
+
+	t1 := hrtime.Now()
+	for i := 0; i < iterations; i++ {
+		t2 := hrtime.Now()
+		diff := t2 - t1
+		if diff > 0 && diff < minDiff {
+			minDiff = diff
+		}
+		t1 = hrtime.Now()
+	}
+
+	t.Logf("Smallest measurabel time difference via hrtime.Now(): %v\n", minDiff)
 }
 
 func TestDoBenchmark2(t *testing.T) {
