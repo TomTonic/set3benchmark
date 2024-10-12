@@ -1,4 +1,4 @@
-package set3benchmark
+package misc
 
 import (
 	"fmt"
@@ -9,51 +9,6 @@ import (
 	set3 "github.com/TomTonic/Set3"
 	"github.com/stretchr/testify/assert"
 )
-
-func TestPrngSeqLength(t *testing.T) {
-	state := PRNG{State: 0x1234567890ABCDEF}
-	limit := uint32(30_000_000)
-	set := set3.EmptyWithCapacity[uint64](limit * 7 / 5)
-	counter := uint32(0)
-	for set.Size() < limit {
-		set.Add(state.Uint64())
-		counter++
-	}
-	assert.True(t, counter == limit, "sequence < limit")
-}
-
-func TestPrngDeterminism(t *testing.T) {
-	state1 := PRNG{State: 0x1234567890ABCDEF}
-	state2 := PRNG{State: 0x1234567890ABCDEF}
-	limit := 30_000_000
-	for i := 0; i < limit; i++ {
-		v1 := state1.Uint64()
-		v2 := state2.Uint64()
-		assert.True(t, v1 == v2, "in sync: values not equal in round %d", i)
-	}
-	_ = state2.Uint64() // skip one value to get both prng out of sync
-	for i := 0; i < limit; i++ {
-		v1 := state1.Uint64()
-		v2 := state2.Uint64()
-		assert.False(t, v1 == v2, "out of sync: values equal in round %d", i)
-	}
-	_ = state1.Uint64() // get both prng back in sync
-	for i := 0; i < limit; i++ {
-		v1 := state1.Uint64()
-		v2 := state2.Uint64()
-		assert.True(t, v1 == v2, "back in sync: values not equal in round %d", i)
-	}
-}
-
-func TestUniqueRandomNumbersDeterministic(t *testing.T) {
-	s1 := PRNG{State: 0x1234567890ABCDEF}
-	s2 := PRNG{State: 0x1234567890ABCDEF}
-
-	urn1 := uniqueRandomNumbers(5000, &s1)
-	urn2 := uniqueRandomNumbers(5000, &s2)
-	assert.True(t, slicesEqual(urn1, urn2), "slices not equal")
-
-}
 
 func TestSearchDataDriver(t *testing.T) {
 	setSize := 50_000
