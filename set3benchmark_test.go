@@ -10,14 +10,17 @@ import (
 )
 
 func TestDoBenchmark2(t *testing.T) {
-	rounds := uint32(72)
-	numberOfSets := uint32(10)
-	initialAlloc := uint32(150)
-	setSize := uint32(100)
+	cfg := singleAddBenchmarkConfig{
+		rounds:       uint32(72),
+		numOfSets:    uint32(10),
+		initSize:     uint32(150),
+		finalSetSize: uint32(100),
+		seed:         0xabcdef,
+	}
 
-	result := addBenchmark(rounds, numberOfSets, initialAlloc, setSize, 0xabcdef)
+	result := addBenchmark(cfg)
 
-	assert.True(t, uint32(len(result)) == rounds, "Result should return %d measurements. It returned %d measurements.", rounds, len(result))
+	assert.True(t, uint32(len(result)) == cfg.rounds, "Result should return %d measurements. It returned %d measurements.", cfg.rounds, len(result))
 	assert.False(t, containsZero(result), "Result should not contain zeros, but it does.")
 	assert.False(t, containsNegative(result), "Result should not contain negative numbers, but it does.")
 
@@ -239,7 +242,7 @@ func TestMakeSingleAddBenchmarkConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
-			config := makeSingleAddBenchmarkConfig(tt.initSize, tt.setSize, tt.targetAddsPerRound, tt.totalAddsPerConfig)
+			config := makeSingleAddBenchmarkConfig(tt.initSize, tt.setSize, tt.targetAddsPerRound, tt.totalAddsPerConfig, 0)
 			if config.numOfSets != tt.expectedNumOfSets {
 				t.Errorf("expected numOfSets %v, got %v", tt.expectedNumOfSets, config.numOfSets)
 			}

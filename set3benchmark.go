@@ -33,17 +33,19 @@ func getPRNGOverhead() float64 {
 	return result
 }
 
-func addBenchmark(rounds, numberOfSets, initialAlloc, setSize uint32, seed uint64) (measurements []float64) {
-	prng := misc.PRNG{State: seed}
+func addBenchmark(cfg singleAddBenchmarkConfig) (measurements []float64) {
+	prng := misc.PRNG{State: cfg.seed}
+	numberOfSets := cfg.numOfSets
+	setSize := cfg.finalSetSize
 	set := make([]*set3.Set3[uint64], numberOfSets)
 	for i := range numberOfSets {
-		set[i] = set3.EmptyWithCapacity[uint64](initialAlloc)
+		set[i] = set3.EmptyWithCapacity[uint64](cfg.initSize)
 	}
-	timePerRound := make([]float64, rounds)
+	timePerRound := make([]float64, cfg.rounds)
 	runtime.GC()
 	debug.SetGCPercent(-1)
 	defer debug.SetGCPercent(100)
-	for r := range rounds {
+	for r := range cfg.rounds {
 		for s := range numberOfSets {
 			set[s].Clear()
 		}
@@ -179,14 +181,17 @@ type singleAddBenchmarkConfig struct {
 	numOfSets          uint32
 	actualAddsPerRound uint32
 	rounds             uint32
+	seed               uint64
 }
 
-func makeSingleAddBenchmarkConfig(initSize, setSize, targetAddsPerRound, totalAddsPerConfig uint32) *singleAddBenchmarkConfig {
-	result := new(singleAddBenchmarkConfig)
-	result.initSize = initSize
-	result.finalSetSize = setSize
-	result.targetAddsPerRound = targetAddsPerRound
-	result.totalAddsPerConfig = totalAddsPerConfig
+func makeSingleAddBenchmarkConfig(initSize, setSize, targetAddsPerRound, totalAddsPerConfig uint32, seed uint64) singleAddBenchmarkConfig {
+	result := singleAddBenchmarkConfig{
+		initSize:           initSize,
+		finalSetSize:       setSize,
+		targetAddsPerRound: targetAddsPerRound,
+		totalAddsPerConfig: totalAddsPerConfig,
+		seed:               seed,
+	}
 	result.numOfSets = uint32(math.Round(float64(targetAddsPerRound) / float64(setSize)))
 	result.actualAddsPerRound = result.numOfSets * setSize // actualAddsPerRound ~ targetAddsPerRound
 	result.rounds = uint32(math.Round(float64(totalAddsPerConfig) / float64(result.actualAddsPerRound)))
@@ -257,8 +262,8 @@ func main() {
 		fmt.Printf("%d ", currentSetSize)
 		// #nosec G115
 		for _, initSize := range initSizeValues(currentSetSize, uint32(toSetSize), step) {
-			cfg := makeSingleAddBenchmarkConfig(initSize, currentSetSize, uint32(targetAddsPerRound), uint32(totalAddsPerConfig))
-			measurements := addBenchmark(cfg.rounds, cfg.numOfSets, cfg.initSize, cfg.finalSetSize, 0xABCDEF0123456789)
+			cfg := makeSingleAddBenchmarkConfig(initSize, currentSetSize, uint32(targetAddsPerRound), uint32(totalAddsPerConfig), 0xABCDEF0123456789)
+			measurements := addBenchmark(cfg)
 			nsValues := toNanoSecondsPerAdd(measurements, cfg.actualAddsPerRound)
 			median := misc.Median(nsValues)
 			fmt.Printf("%.3f ", median)
