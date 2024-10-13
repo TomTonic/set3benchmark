@@ -185,6 +185,9 @@ type singleAddBenchmarkConfig struct {
 }
 
 func makeSingleAddBenchmarkConfig(initSize, setSize, targetAddsPerRound, totalAddsPerConfig uint32, seed uint64) singleAddBenchmarkConfig {
+	if setSize > targetAddsPerRound {
+		targetAddsPerRound = setSize
+	}
 	if targetAddsPerRound > totalAddsPerConfig {
 		totalAddsPerConfig = targetAddsPerRound
 	}

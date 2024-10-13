@@ -2,6 +2,7 @@ package main
 
 import (
 	"math"
+	"math/rand"
 	"reflect"
 	"testing"
 
@@ -243,6 +244,8 @@ func TestMakeSingleAddBenchmarkConfig(t *testing.T) {
 		{20, 20, 4_000, 20_000, 200, 4_000, 5},
 		// targetAddsPerRound > totalAddsPerConfig
 		{20, 20, 2_000, 1_000, 100, 2_000, 1},
+		// setSize > targetAddsPerRound
+		{20, 2_000, 200, 20_000, 1, 2_000, 10},
 	}
 
 	for _, tt := range tests {
@@ -257,6 +260,25 @@ func TestMakeSingleAddBenchmarkConfig(t *testing.T) {
 			if config.rounds != tt.expectedRounds {
 				t.Errorf("expected rounds %v, got %v", tt.expectedRounds, config.rounds)
 			}
+		})
+	}
+}
+
+func TestMakeSingleAddBenchmarkConfigRandom(t *testing.T) {
+	for range 5_000 {
+		initSize := rand.Uint32() % (1 << 20)
+		setSize := rand.Uint32() % (1 << 20)
+		targetAddsPerRound := rand.Uint32() % (1 << 20)
+		totalAddsPerConfig := rand.Uint32() % (1 << 20)
+		t.Run("", func(t *testing.T) {
+			config := makeSingleAddBenchmarkConfig(initSize, setSize, targetAddsPerRound, totalAddsPerConfig, 0)
+			assert.True(t, config.finalSetSize <= config.targetAddsPerRound, "config.finalSetSize(%d) > config.targetAddsPerRound(%d)", config.finalSetSize, config.targetAddsPerRound)
+			assert.True(t, config.targetAddsPerRound <= config.totalAddsPerConfig, "config.targetAddsPerRound(%d) > config.totalAddsPerConfig(%d)", config.targetAddsPerRound, config.totalAddsPerConfig)
+			actualAddsPerConfig := config.rounds * config.numOfSets * config.finalSetSize
+			assert.True(t, config.totalAddsPerConfig-config.targetAddsPerRound <= actualAddsPerConfig, "config.totalAddsPerConfig-config.targetAddsPerRound(%d-%d=%d) > actualAddsPerConfig(%d)",
+				config.totalAddsPerConfig, config.targetAddsPerRound, config.totalAddsPerConfig-config.targetAddsPerRound, actualAddsPerConfig)
+			assert.True(t, config.totalAddsPerConfig+config.targetAddsPerRound >= actualAddsPerConfig, "config.totalAddsPerConfig+config.targetAddsPerRound(%d+%d=%d) < actualAddsPerConfig(%d)",
+				config.totalAddsPerConfig, config.targetAddsPerRound, config.totalAddsPerConfig+config.targetAddsPerRound, actualAddsPerConfig)
 		})
 	}
 }
