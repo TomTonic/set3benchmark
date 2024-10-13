@@ -10,14 +10,14 @@ import (
 )
 
 func TestDoBenchmark2(t *testing.T) {
-	rounds := 72
+	rounds := uint32(72)
 	numberOfSets := uint32(10)
 	initialAlloc := uint32(150)
 	setSize := uint32(100)
 
 	result := addBenchmark(rounds, numberOfSets, initialAlloc, setSize, 0xabcdef)
 
-	assert.True(t, len(result) == rounds, "Result should return %d measurements. It returned %d measurements.", rounds, len(result))
+	assert.True(t, uint32(len(result)) == rounds, "Result should return %d measurements. It returned %d measurements.", rounds, len(result))
 	assert.False(t, containsZero(result), "Result should not contain zeros, but it does.")
 	assert.False(t, containsNegative(result), "Result should not contain negative numbers, but it does.")
 
@@ -205,6 +205,49 @@ func TestToNSperAdd(t *testing.T) {
 				if result[i] != tt.expected[i] {
 					t.Errorf("at index %d, got %v, want %v", i, result[i], tt.expected[i])
 				}
+			}
+		})
+	}
+}
+
+func TestMakeSingleAddBenchmarkConfig(t *testing.T) {
+	tests := []struct {
+		initSize             uint32
+		setSize              uint32
+		targetAddsPerRound   uint32
+		totalAddsPerConfig   uint32
+		expectedNumOfSets    uint32
+		expectedAddsPerRound uint32
+		expectedRounds       uint32
+	}{
+		{20, 20, 2_000, 20_000, 100, 2_000, 10},
+		{20, 20, 1_999, 20_000, 100, 2_000, 10},
+		{20, 20, 2_001, 20_000, 100, 2_000, 10},
+		{20, 20, 2_000, 20_010, 100, 2_000, 10},
+		{20, 20, 1_999, 20_010, 100, 2_000, 10},
+		{20, 20, 2_001, 20_010, 100, 2_000, 10},
+		{20, 20, 2_000, 19_990, 100, 2_000, 10},
+		{20, 20, 1_999, 19_990, 100, 2_000, 10},
+		{20, 20, 2_001, 19_990, 100, 2_000, 10},
+		// more/less sets
+		{20, 20, 2_020, 20_000, 101, 2_020, 10},
+		{20, 20, 1_980, 20_000, 99, 1_980, 10},
+		// more/less rounds
+		{20, 20, 2_000, 21_001, 100, 2_000, 11},
+		{20, 20, 2_000, 18_999, 100, 2_000, 9},
+	}
+
+	for _, tt := range tests {
+		t.Run("", func(t *testing.T) {
+			config := makeSingleAddBenchmarkConfig(tt.initSize, tt.setSize, tt.targetAddsPerRound, tt.totalAddsPerConfig)
+			if config.numOfSets != tt.expectedNumOfSets {
+				t.Errorf("expected numOfSets %v, got %v", tt.expectedNumOfSets, config.numOfSets)
+			}
+			if config.actualAddsPerRound != tt.expectedAddsPerRound {
+				t.Errorf("expected actualAddsPerRound %v, got %v", tt.expectedAddsPerRound, config.actualAddsPerRound)
+			}
+			if config.rounds != tt.expectedRounds {
+				t.Errorf("expected rounds %v, got %v", tt.expectedRounds, config.rounds)
 			}
 		})
 	}
