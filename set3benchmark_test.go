@@ -238,6 +238,9 @@ func TestMakeSingleAddBenchmarkConfig(t *testing.T) {
 		// more/less rounds
 		{20, 20, 2_000, 21_001, 100, 2_000, 11},
 		{20, 20, 2_000, 18_999, 100, 2_000, 9},
+		// more/less sets and rounds
+		{20, 20, 1_000, 20_000, 50, 1_000, 20},
+		{20, 20, 4_000, 20_000, 200, 4_000, 5},
 	}
 
 	for _, tt := range tests {
