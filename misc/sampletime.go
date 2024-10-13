@@ -2,6 +2,7 @@ package misc
 
 import (
 	"math"
+	"runtime"
 	"runtime/debug"
 )
 
@@ -49,6 +50,7 @@ func calcMinTimeSample() int64 {
 
 func calcMedCallTime() float64 {
 	var values [iterationsForCallibration + 1]TimeStamp
+	runtime.GC()
 	debug.SetGCPercent(-1)
 	for i := range iterationsForCallibration + 1 {
 		values[i] = SampleTime()
@@ -64,6 +66,13 @@ func calcMedCallTime() float64 {
 			deltas = append(deltas, float64(di))
 		}
 	}
+	if zeros > 0 {
+		// zeros, so two or more calls returned the same value -> the runtime of a call is smaller than the resolution of the clock -> return average
+		diff := float64(DiffTimeStamps(values[0], values[iterationsForCallibration]))
+		avg := diff / float64(iterationsForCallibration+1)
+		return avg
+	}
+	// the resolution of the clock is better than the runtime of a call
 	median := Median(deltas)
 	return median
 }
