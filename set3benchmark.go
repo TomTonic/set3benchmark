@@ -27,9 +27,9 @@ func getPRNGOverhead() float64 {
 	}
 	stop := misc.SampleTime()
 	debug.SetGCPercent(100)
-	diff := float64(misc.DiffTimeStamps(start, stop))
-	nowOverhead := misc.GetSampleTimeRuntime()
-	result := (diff - nowOverhead) / float64(calibrationCalls)
+	totalTimeForRandomNumbers := float64(misc.DiffTimeStamps(start, stop))
+	sampleTimeOverhead := misc.GetSampleTimeRuntime()
+	result := (totalTimeForRandomNumbers - sampleTimeOverhead) / float64(calibrationCalls)
 	return result
 }
 
@@ -122,7 +122,7 @@ func (p *Step) String() string {
 	return fmt.Sprintf("%d", p.integerStep)
 }
 
-func getNumberOfSteps(setSizeTo uint32, step Step) uint32 {
+func getNumberOfSteps(step Step, limit uint32) uint32 {
 	if step.isPercent {
 		pval := step.percent
 		count := uint32(0)
@@ -131,14 +131,14 @@ func getNumberOfSteps(setSizeTo uint32, step Step) uint32 {
 		}
 		return count
 	}
-	numberOfSteps := setSizeTo / step.integerStep
-	if setSizeTo%step.integerStep != 0 {
+	numberOfSteps := limit / step.integerStep
+	if limit%step.integerStep != 0 {
 		numberOfSteps++
 	}
 	return numberOfSteps + 1
 }
 
-func columnHeadings(setSizeTo uint32, step Step) []string {
+func columnHeadings(step Step, limit uint32) []string {
 	result := make([]string, 0, 100)
 	if step.isPercent {
 		pval := step.percent
@@ -146,7 +146,7 @@ func columnHeadings(setSizeTo uint32, step Step) []string {
 			result = append(result, fmt.Sprintf("+%.2f%%%% ", f)) // caution: strings are used in fmt.Printf() so encode %% twice
 		}
 	} else {
-		numberOfSteps := setSizeTo
+		numberOfSteps := limit
 		ival := step.integerStep
 		for i := uint32(0); i < numberOfSteps+ival; i += ival {
 			result = append(result, fmt.Sprintf("+%d ", i))
@@ -155,20 +155,38 @@ func columnHeadings(setSizeTo uint32, step Step) []string {
 	return result
 }
 
-func initSizeValues(currentSetSize, setSizeTo uint32, step Step) []uint32 {
+func initSizeValues(start uint32, step Step, limit uint32) []uint32 {
 	result := make([]uint32, 0, 100)
 	if step.isPercent {
 		pval := step.percent
 		for f := 0.0; f < 100.0+pval; f += pval {
-			retval := currentSetSize + uint32(math.Round(f*float64(currentSetSize)/100.0))
+			retval := start + uint32(math.Round(f*float64(start)/100.0))
 			result = append(result, retval)
 		}
 	} else {
-		numberOfSteps := setSizeTo
+		numberOfSteps := limit
 		ival := step.integerStep
-		for i := currentSetSize; i <= currentSetSize+numberOfSteps; i += ival {
+		for i := start; i <= start+numberOfSteps; i += ival {
 			result = append(result, i)
 		}
+	}
+	return result
+}
+
+type addBenchmarkTestField struct {
+	fromSetSize, toSetSize, targetAddsPerRound uint32
+	expRuntimePerAdd, secondsPerConfig         float64
+	step                                       Step
+}
+
+func makeAddBenchmarkTestFieldFromFlags(fromSetSize, toSetSize, targetAddsPerRound uint, expRuntimePerAdd, secondsPerConfig float64, step Step) addBenchmarkTestField {
+	result := addBenchmarkTestField{
+		fromSetSize:        uint32(fromSetSize),
+		toSetSize:          uint32(toSetSize),
+		targetAddsPerRound: uint32(targetAddsPerRound),
+		expRuntimePerAdd:   expRuntimePerAdd,
+		secondsPerConfig:   secondsPerConfig,
+		step:               step,
 	}
 	return result
 }
@@ -207,6 +225,7 @@ func makeSingleAddBenchmarkConfig(initSize, setSize, targetAddsPerRound, totalAd
 func main() {
 	var fromSetSize, toSetSize, targetAddsPerRound uint
 	var expRuntimePerAdd, secondsPerConfig float64
+	var step Step
 
 	flag.UintVar(&fromSetSize, "from", 100, "First set size to benchmark (inclusive)")
 	flag.UintVar(&toSetSize, "to", 200, "Last set size to benchmark (inclusive)")
@@ -214,7 +233,6 @@ func main() {
 	flag.UintVar(&targetAddsPerRound, "apr", 50_000, "AddsPerRound - instructions between two measurements. Balance between memory consumption (cache!) and timer precision (Windows: 100ns)")
 	flag.Float64Var(&secondsPerConfig, "spc", 1.0, "SecondsPerConfig - estimated benchmark time per configuration in seconds")
 	flag.Float64Var(&expRuntimePerAdd, "erpa", 8.0, "Expected Runtime Per Add - in nanoseconds per instruction. Used to predcict runtimes")
-	var step Step
 	flag.Var(&step, "step", "Step to increment headroom of pre-allocated sets. Either percent of set size (e.g. \"2.5%\") or absolut value (e.g. \"2\") (default: 1)")
 
 	flag.Parse()
@@ -245,7 +263,7 @@ func main() {
 	fmt.Printf("Add()'s per round:\t\t%d (expect a quantization error of %.3f%%, i.e. %.3fns per Add)\n", targetAddsPerRound, quantizationError, quantizationError*expRuntimePerAdd)
 	fmt.Printf("Add()'s per config:\t\t%.0f (should result in a benchmarking time of %.2fs per config)\n", totalAddsPerConfig, secondsPerConfig)
 	fmt.Printf("Set3 sizes:\t\t\tfrom %d to %d, stepsize %v\n", fromSetSize, toSetSize, step.String())
-	numberOfStepsPerSetSize := getNumberOfSteps(uint32(toSetSize), step)                              // #nosec G115
+	numberOfStepsPerSetSize := getNumberOfSteps(step, uint32(toSetSize))                              // #nosec G115
 	fmt.Printf("Number of configs:\t\t%d\n", numberOfStepsPerSetSize*uint32(toSetSize-fromSetSize+1)) // #nosec G115
 	totalduration := time.Duration(expRuntimePerAdd * totalAddsPerConfig)                             // total ns per round
 	totalduration *= time.Duration(numberOfStepsPerSetSize)                                           // different headroom sizes per setSize
@@ -259,7 +277,7 @@ func main() {
 
 	fmt.Printf("setSize ")
 	// #nosec G115
-	for _, columnH := range columnHeadings(uint32(toSetSize), step) {
+	for _, columnH := range columnHeadings(step, uint32(toSetSize)) {
 		fmt.Print(columnH)
 	}
 	fmt.Print("\n")
@@ -267,7 +285,7 @@ func main() {
 	for currentSetSize := uint32(fromSetSize); currentSetSize <= uint32(toSetSize); currentSetSize++ {
 		fmt.Printf("%d ", currentSetSize)
 		// #nosec G115
-		for _, initSize := range initSizeValues(currentSetSize, uint32(toSetSize), step) {
+		for _, initSize := range initSizeValues(currentSetSize, step, uint32(toSetSize)) {
 			cfg := makeSingleAddBenchmarkConfig(initSize, currentSetSize, uint32(targetAddsPerRound), uint32(totalAddsPerConfig), 0xABCDEF0123456789)
 			measurements := addBenchmark(cfg)
 			nsValues := toNanoSecondsPerAdd(measurements, cfg.actualAddsPerRound)

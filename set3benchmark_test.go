@@ -69,9 +69,9 @@ func minVal(measurements []float64) float64 {
 
 func TestGetNumberOfSteps(t *testing.T) {
 	tests := []struct {
-		setSizeTo uint32
-		step      Step
-		expected  uint32
+		limit    uint32
+		step     Step
+		expected uint32
 	}{
 		{33, Step{true, true, 10.0, 0}, 11},   // expect: 0%, 10%, 20%, ..., 90%, 100%
 		{19, Step{true, true, 25.0, 0}, 5},    // expect: 0%, 25%, 50%, 75%, 100%
@@ -82,7 +82,7 @@ func TestGetNumberOfSteps(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
-			result := getNumberOfSteps(tt.setSizeTo, tt.step)
+			result := getNumberOfSteps(tt.step, tt.limit)
 			if result != tt.expected {
 				t.Errorf("got %d, want %d", result, tt.expected)
 			}
@@ -92,9 +92,9 @@ func TestGetNumberOfSteps(t *testing.T) {
 
 func TestColumnHeadings(t *testing.T) {
 	tests := []struct {
-		setSizeTo uint32
-		step      Step
-		expected  []string
+		limit    uint32
+		step     Step
+		expected []string
 	}{
 		{33, Step{true, true, 10.0, 0}, []string{"+0.00%% ", "+10.00%% ", "+20.00%% ", "+30.00%% ", "+40.00%% ", "+50.00%% ", "+60.00%% ", "+70.00%% ", "+80.00%% ", "+90.00%% ", "+100.00%% "}},
 		{19, Step{true, true, 25.0, 0}, []string{"+0.00%% ", "+25.00%% ", "+50.00%% ", "+75.00%% ", "+100.00%% "}},
@@ -105,7 +105,7 @@ func TestColumnHeadings(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
-			result := columnHeadings(tt.setSizeTo, tt.step)
+			result := columnHeadings(tt.step, tt.limit)
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("got %v, want %v", result, tt.expected)
 			}
@@ -115,10 +115,10 @@ func TestColumnHeadings(t *testing.T) {
 
 func TestInitSizeValues(t *testing.T) {
 	tests := []struct {
-		currentSetSize uint32
-		setSizeTo      uint32
-		step           Step
-		expected       []uint32
+		start    uint32
+		limit    uint32
+		step     Step
+		expected []uint32
 	}{
 		{10, 11, Step{true, true, 10.0, 0}, []uint32{10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}},
 		{100, 1000, Step{true, true, 25.0, 0}, []uint32{100, 125, 150, 175, 200}},
@@ -129,7 +129,7 @@ func TestInitSizeValues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
-			result := initSizeValues(tt.currentSetSize, tt.setSizeTo, tt.step)
+			result := initSizeValues(tt.start, tt.step, tt.limit)
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("got %v, want %v", result, tt.expected)
 			}
