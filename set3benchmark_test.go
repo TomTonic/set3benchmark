@@ -4,6 +4,7 @@ import (
 	"math"
 	"math/rand"
 	"reflect"
+	"regexp"
 	"testing"
 	"time"
 
@@ -375,5 +376,18 @@ func TestStepType(t *testing.T) {
 	expected := "string"
 	if result := step.Type(); result != expected {
 		t.Errorf("Type() = %v, want %v", result, expected)
+	}
+}
+
+func TestPrintTotalRuntime(t *testing.T) {
+
+	start := time.Now().Add(-time.Second) // Simulate a start time 1 second ago
+	s := printTotalRuntime(start)
+
+	// Define the regular expression to match the output
+	re := regexp.MustCompile(`\nTotal runtime of benchmark: \d+(\.\d+)?s\n`)
+
+	if !re.MatchString(s) {
+		t.Errorf("Output did not match expected format: %v", s)
 	}
 }

@@ -73,9 +73,9 @@ func toNanoSecondsPerAdd(measurements []float64, addsPerRound uint32) []float64 
 	return result
 }
 
-func printTotalRuntime(start time.Time) {
+func printTotalRuntime(start time.Time) string {
 	end := time.Now()
-	fmt.Printf("\nTotal runtime of benchmark: %v\n", end.Sub(start))
+	return fmt.Sprintf("\nTotal runtime of benchmark: %v\n", end.Sub(start))
 }
 
 // Percent is a custom flag type for parsing percent values.
@@ -248,7 +248,7 @@ func main() {
 	printSetup(p, totalAddsPerConfig)
 
 	start := time.Now()
-	defer printTotalRuntime(start)
+	defer fmt.Print(printTotalRuntime(start))
 
 	fmt.Printf("setSize ")
 	for _, columnH := range columnHeadings(p.step, p.toSetSize) {
