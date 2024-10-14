@@ -369,3 +369,11 @@ func TestCalcQuantizationError(t *testing.T) {
 		})
 	}
 }
+
+func TestStepType(t *testing.T) {
+	step := Step{}
+	expected := "string"
+	if result := step.Type(); result != expected {
+		t.Errorf("Type() = %v, want %v", result, expected)
+	}
+}

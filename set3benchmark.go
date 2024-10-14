@@ -282,8 +282,7 @@ func printSetup(p programParametrization, totalAddsPerConfig uint32) {
 	numberOfStepsPerSetSize := getNumberOfSteps(p.step, p.toSetSize)
 	fmt.Printf("Number of configs:\t\t%d\n", numberOfStepsPerSetSize*(p.toSetSize-p.fromSetSize+1))
 	totalduration := predictTotalDuration(p, totalAddsPerConfig)
-	fmt.Printf("Expected total runtime:\t\t%v (assumption: %fns per Add(prng.Uint64()) and 12%% overhead for housekeeping)\n", totalduration, p.expRuntimePerAdd)
-	fmt.Print("\n")
+	fmt.Printf("Expected total runtime:\t\t%v (assumption: %fns per Add(prng.Uint64()) and 12%% overhead for housekeeping)\n\n", totalduration, p.expRuntimePerAdd)
 }
 
 func calcQuantizationError(p programParametrization) float64 {
