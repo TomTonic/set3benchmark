@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"math"
 	"runtime"
@@ -9,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	flag "github.com/spf13/pflag"
 
 	set3 "github.com/TomTonic/Set3"
 	misc "github.com/TomTonic/set3benchmark/misc"
@@ -122,6 +123,10 @@ func (p *Step) String() string {
 	return fmt.Sprintf("%d", p.integerStep)
 }
 
+func (p *Step) Type() string {
+	return "string"
+}
+
 func getNumberOfSteps(step Step, limit uint32) uint32 {
 	if step.isPercent {
 		pval := step.percent
@@ -173,22 +178,10 @@ func initSizeValues(start uint32, step Step, limit uint32) []uint32 {
 	return result
 }
 
-type addBenchmarkTestField struct {
+type programParametrization struct {
 	fromSetSize, toSetSize, targetAddsPerRound uint32
 	expRuntimePerAdd, secondsPerConfig         float64
 	step                                       Step
-}
-
-func makeAddBenchmarkTestFieldFromFlags(fromSetSize, toSetSize, targetAddsPerRound uint, expRuntimePerAdd, secondsPerConfig float64, step Step) addBenchmarkTestField {
-	result := addBenchmarkTestField{
-		fromSetSize:        uint32(fromSetSize),
-		toSetSize:          uint32(toSetSize),
-		targetAddsPerRound: uint32(targetAddsPerRound),
-		expRuntimePerAdd:   expRuntimePerAdd,
-		secondsPerConfig:   secondsPerConfig,
-		step:               step,
-	}
-	return result
 }
 
 type singleAddBenchmarkConfig struct {
@@ -223,70 +216,48 @@ func makeSingleAddBenchmarkConfig(initSize, setSize, targetAddsPerRound, totalAd
 }
 
 func main() {
-	var fromSetSize, toSetSize, targetAddsPerRound uint
-	var expRuntimePerAdd, secondsPerConfig float64
-	var step Step
+	var p programParametrization
 
-	flag.UintVar(&fromSetSize, "from", 100, "First set size to benchmark (inclusive)")
-	flag.UintVar(&toSetSize, "to", 200, "Last set size to benchmark (inclusive)")
+	flag.Uint32Var(&p.fromSetSize, "from", 100, "First set size to benchmark (inclusive)")
+	flag.Uint32Var(&p.toSetSize, "to", 200, "Last set size to benchmark (inclusive)")
 	// 50_000 x ~8ns = ~400_000ns; Timer precision 100ns (Windows) => 0,025% error, i.e. 0,02ns per Add()
-	flag.UintVar(&targetAddsPerRound, "apr", 50_000, "AddsPerRound - instructions between two measurements. Balance between memory consumption (cache!) and timer precision (Windows: 100ns)")
-	flag.Float64Var(&secondsPerConfig, "spc", 1.0, "SecondsPerConfig - estimated benchmark time per configuration in seconds")
-	flag.Float64Var(&expRuntimePerAdd, "erpa", 8.0, "Expected Runtime Per Add - in nanoseconds per instruction. Used to predcict runtimes")
-	flag.Var(&step, "step", "Step to increment headroom of pre-allocated sets. Either percent of set size (e.g. \"2.5%\") or absolut value (e.g. \"2\") (default: 1)")
+	flag.Uint32Var(&p.targetAddsPerRound, "apr", 50_000, "AddsPerRound - instructions between two measurements. Balance between memory consumption (cache!) and timer precision (Windows: 100ns)")
+	flag.Float64Var(&p.secondsPerConfig, "spc", 1.0, "SecondsPerConfig - estimated benchmark time per configuration in seconds")
+	flag.Float64Var(&p.expRuntimePerAdd, "erpa", 8.0, "Expected Runtime Per Add - in nanoseconds per instruction. Used to predcict runtimes")
+	flag.Var(&p.step, "step", "Step to increment headroom of pre-allocated sets. Either percent of set size (e.g. \"2.5%\") or absolut value (e.g. \"2\") (default: 1)")
 
 	flag.Parse()
 
-	if !step.isSet {
-		step.isSet = true
-		step.isPercent = false
-		step.integerStep = 1
+	if !p.step.isSet {
+		p.step.isSet = true
+		p.step.isPercent = false
+		p.step.integerStep = 1
 	}
 
-	if toSetSize < fromSetSize {
+	if p.toSetSize < p.fromSetSize {
 		panic("to < from")
 	}
 
-	if toSetSize > 1<<28 {
+	if p.toSetSize > 1<<28 {
 		panic("to too big")
 	}
 
-	totalAddsPerConfig := secondsPerConfig * (1_000_000_000.0 / float64(expRuntimePerAdd))
+	totalAddsPerConfig := uint32(p.secondsPerConfig * (1_000_000_000.0 / p.expRuntimePerAdd))
 
-	fmt.Printf("Architecture:\t\t\t%s\n", runtime.GOARCH)
-	fmt.Printf("OS:\t\t\t\t%s\n", runtime.GOOS)
-	fmt.Printf("Max timer precision:\t\t%.2fns\n", misc.GetSampleTimePrecision())
-	fmt.Printf("SampleTime() runtime:\t\t%.2fns (informative, already subtracted from below measurement values)\n", misc.GetSampleTimeRuntime())
-	fmt.Printf("prng.Uint64() runtime:\t\t%.2fns (informative, already subtracted from below measurement values)\n", rngOverhead)
-	fmt.Printf("Exp. Add(prng.Uint64()) rt:\t%.2fns\n", expRuntimePerAdd)
-	quantizationError := misc.GetSampleTimePrecision() * 100.0 / (expRuntimePerAdd * float64(targetAddsPerRound))
-	fmt.Printf("Add()'s per round:\t\t%d (expect a quantization error of %.3f%%, i.e. %.3fns per Add)\n", targetAddsPerRound, quantizationError, quantizationError*expRuntimePerAdd)
-	fmt.Printf("Add()'s per config:\t\t%.0f (should result in a benchmarking time of %.2fs per config)\n", totalAddsPerConfig, secondsPerConfig)
-	fmt.Printf("Set3 sizes:\t\t\tfrom %d to %d, stepsize %v\n", fromSetSize, toSetSize, step.String())
-	numberOfStepsPerSetSize := getNumberOfSteps(step, uint32(toSetSize))                              // #nosec G115
-	fmt.Printf("Number of configs:\t\t%d\n", numberOfStepsPerSetSize*uint32(toSetSize-fromSetSize+1)) // #nosec G115
-	totalduration := time.Duration(expRuntimePerAdd * totalAddsPerConfig)                             // total ns per round
-	totalduration *= time.Duration(numberOfStepsPerSetSize)                                           // different headroom sizes per setSize
-	totalduration *= time.Duration(toSetSize - fromSetSize + 1)                                       // #nosec G115
-	totalduration = time.Duration(float64(totalduration) * 1.12)                                      // overhead
-	fmt.Printf("Expected total runtime:\t\t%v (assumption: %fns per Add(prng.Uint64()) and 12%% overhead for housekeeping)\n", totalduration, expRuntimePerAdd)
-	fmt.Print("\n")
+	printSetup(p, totalAddsPerConfig)
 
 	start := time.Now()
 	defer printTotalRuntime(start)
 
 	fmt.Printf("setSize ")
-	// #nosec G115
-	for _, columnH := range columnHeadings(step, uint32(toSetSize)) {
+	for _, columnH := range columnHeadings(p.step, p.toSetSize) {
 		fmt.Print(columnH)
 	}
 	fmt.Print("\n")
-	// #nosec G115
-	for currentSetSize := uint32(fromSetSize); currentSetSize <= uint32(toSetSize); currentSetSize++ {
+	for currentSetSize := p.fromSetSize; currentSetSize <= p.toSetSize; currentSetSize++ {
 		fmt.Printf("%d ", currentSetSize)
-		// #nosec G115
-		for _, initSize := range initSizeValues(currentSetSize, step, uint32(toSetSize)) {
-			cfg := makeSingleAddBenchmarkConfig(initSize, currentSetSize, uint32(targetAddsPerRound), uint32(totalAddsPerConfig), 0xABCDEF0123456789)
+		for _, initSize := range initSizeValues(currentSetSize, p.step, p.toSetSize) {
+			cfg := makeSingleAddBenchmarkConfig(initSize, currentSetSize, p.targetAddsPerRound, totalAddsPerConfig, 0xABCDEF0123456789)
 			measurements := addBenchmark(cfg)
 			nsValues := toNanoSecondsPerAdd(measurements, cfg.actualAddsPerRound)
 			median := misc.Median(nsValues)
@@ -294,4 +265,25 @@ func main() {
 		}
 		fmt.Printf("\n")
 	}
+}
+
+func printSetup(p programParametrization, totalAddsPerConfig uint32) {
+	fmt.Printf("Architecture:\t\t\t%s\n", runtime.GOARCH)
+	fmt.Printf("OS:\t\t\t\t%s\n", runtime.GOOS)
+	fmt.Printf("Max timer precision:\t\t%.2fns\n", misc.GetSampleTimePrecision())
+	fmt.Printf("SampleTime() runtime:\t\t%.2fns (informative, already subtracted from below measurement values)\n", misc.GetSampleTimeRuntime())
+	fmt.Printf("prng.Uint64() runtime:\t\t%.2fns (informative, already subtracted from below measurement values)\n", rngOverhead)
+	fmt.Printf("Exp. Add(prng.Uint64()) rt:\t%.2fns\n", p.expRuntimePerAdd)
+	quantizationError := misc.GetSampleTimePrecision() * 100.0 / (p.expRuntimePerAdd * float64(p.targetAddsPerRound))
+	fmt.Printf("Add()'s per round:\t\t%d (expect a quantization error of %.3f%%, i.e. %.3fns per Add)\n", p.targetAddsPerRound, quantizationError, quantizationError*p.expRuntimePerAdd)
+	fmt.Printf("Add()'s per config:\t\t%d (should result in a benchmarking time of %.2fs per config)\n", totalAddsPerConfig, p.secondsPerConfig)
+	fmt.Printf("Set3 sizes:\t\t\tfrom %d to %d, stepsize %v\n", p.fromSetSize, p.toSetSize, p.step.String())
+	numberOfStepsPerSetSize := getNumberOfSteps(p.step, p.toSetSize)
+	fmt.Printf("Number of configs:\t\t%d\n", numberOfStepsPerSetSize*(p.toSetSize-p.fromSetSize+1))
+	totalduration := time.Duration(uint32(p.expRuntimePerAdd * float64(totalAddsPerConfig)))
+	totalduration *= time.Duration(numberOfStepsPerSetSize)
+	totalduration *= time.Duration(p.toSetSize - p.fromSetSize + 1)
+	totalduration = time.Duration(float64(totalduration) * 1.12)
+	fmt.Printf("Expected total runtime:\t\t%v (assumption: %fns per Add(prng.Uint64()) and 12%% overhead for housekeeping)\n", totalduration, p.expRuntimePerAdd)
+	fmt.Print("\n")
 }
