@@ -281,12 +281,13 @@ func printSetup(p programParametrization, totalAddsPerConfig uint32) {
 	fmt.Printf("Set3 sizes:\t\t\tfrom %d to %d, stepsize %v\n", p.fromSetSize, p.toSetSize, p.step.String())
 	numberOfStepsPerSetSize := getNumberOfSteps(p.step, p.toSetSize)
 	fmt.Printf("Number of configs:\t\t%d\n", numberOfStepsPerSetSize*(p.toSetSize-p.fromSetSize+1))
-	totalduration := predictTotalDuration(p, totalAddsPerConfig, numberOfStepsPerSetSize)
+	totalduration := predictTotalDuration(p, totalAddsPerConfig)
 	fmt.Printf("Expected total runtime:\t\t%v (assumption: %fns per Add(prng.Uint64()) and 12%% overhead for housekeeping)\n", totalduration, p.expRuntimePerAdd)
 	fmt.Print("\n")
 }
 
-func predictTotalDuration(p programParametrization, totalAddsPerConfig uint32, numberOfStepsPerSetSize uint32) time.Duration {
+func predictTotalDuration(p programParametrization, totalAddsPerConfig uint32) time.Duration {
+	numberOfStepsPerSetSize := getNumberOfSteps(p.step, p.toSetSize)
 	totalduration := time.Duration(uint32(p.expRuntimePerAdd * float64(totalAddsPerConfig)))
 	totalduration *= time.Duration(numberOfStepsPerSetSize)
 	totalduration *= time.Duration(p.toSetSize - p.fromSetSize + 1)

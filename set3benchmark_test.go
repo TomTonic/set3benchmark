@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"reflect"
 	"testing"
+	"time"
 
 	misc "github.com/TomTonic/set3benchmark/misc"
 	"github.com/stretchr/testify/assert"
@@ -281,6 +282,53 @@ func TestMakeSingleAddBenchmarkConfigRandom(t *testing.T) {
 				config.totalAddsPerConfig, config.targetAddsPerRound, config.totalAddsPerConfig-config.targetAddsPerRound, actualAddsPerConfig)
 			assert.True(t, config.totalAddsPerConfig+config.targetAddsPerRound >= actualAddsPerConfig, "config.totalAddsPerConfig+config.targetAddsPerRound(%d+%d=%d) < actualAddsPerConfig(%d)",
 				config.totalAddsPerConfig, config.targetAddsPerRound, config.totalAddsPerConfig+config.targetAddsPerRound, actualAddsPerConfig)
+		})
+	}
+}
+
+func TestPredictTotalDuration(t *testing.T) {
+	tests := []struct {
+		name               string
+		p                  programParametrization
+		totalAddsPerConfig uint32
+		expectedDuration   time.Duration
+	}{
+		{
+			name: "Basic case with integer step",
+			p: programParametrization{
+				step: Step{
+					isPercent:   false,
+					integerStep: 1,
+				},
+				toSetSize:        10,
+				fromSetSize:      1,
+				expRuntimePerAdd: 2.0,
+			},
+			totalAddsPerConfig: 5,
+			expectedDuration:   time.Duration(1232),
+		},
+		{
+			name: "Large set size with percent step",
+			p: programParametrization{
+				step: Step{
+					isPercent: true,
+					percent:   0.1,
+				},
+				toSetSize:        20,
+				fromSetSize:      5,
+				expRuntimePerAdd: 8,
+			},
+			totalAddsPerConfig: 10_000_000,
+			expectedDuration:   time.Duration(1_435_033_600_000),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := predictTotalDuration(tt.p, tt.totalAddsPerConfig)
+			if got != tt.expectedDuration {
+				t.Errorf("predictTotalDuration() = %v, want %v", got, tt.expectedDuration)
+			}
 		})
 	}
 }
