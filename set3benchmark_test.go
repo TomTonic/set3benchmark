@@ -332,3 +332,40 @@ func TestPredictTotalDuration(t *testing.T) {
 		})
 	}
 }
+
+func TestCalcQuantizationError(t *testing.T) {
+	tests := []struct {
+		name             string
+		p                programParametrization
+		expectedErrorWin float64
+		expectedErrorLin float64
+	}{
+		{
+			name: "Basic case",
+			p: programParametrization{
+				expRuntimePerAdd:   8.0,
+				targetAddsPerRound: 50_000,
+			},
+			expectedErrorWin: 100.0 * 100.0 / (8.0 * 50_000),
+			expectedErrorLin: 30.0 * 100.0 / (8.0 * 50_000),
+		},
+		{
+			name: "Small number of adds per round",
+			p: programParametrization{
+				expRuntimePerAdd:   1.5,
+				targetAddsPerRound: 100,
+			},
+			expectedErrorWin: 100.0 * 100.0 / (1.5 * 100),
+			expectedErrorLin: 30.0 * 100.0 / (1.5 * 100),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := calcQuantizationError(tt.p)
+			if got >= tt.expectedErrorWin || got <= tt.expectedErrorLin {
+				t.Errorf("calcQuantizationError() = %v, want something between %v and %v", got, tt.expectedErrorLin, tt.expectedErrorWin)
+			}
+		})
+	}
+}

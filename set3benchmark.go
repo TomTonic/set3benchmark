@@ -275,7 +275,7 @@ func printSetup(p programParametrization, totalAddsPerConfig uint32) {
 	fmt.Printf("SampleTime() runtime:\t\t%.2fns (informative, already subtracted from below measurement values)\n", misc.GetSampleTimeRuntime())
 	fmt.Printf("prng.Uint64() runtime:\t\t%.2fns (informative, already subtracted from below measurement values)\n", rngOverhead)
 	fmt.Printf("Exp. Add(prng.Uint64()) rt:\t%.2fns\n", p.expRuntimePerAdd)
-	quantizationError := misc.GetSampleTimePrecision() * 100.0 / (p.expRuntimePerAdd * float64(p.targetAddsPerRound))
+	quantizationError := calcQuantizationError(p)
 	fmt.Printf("Add()'s per round:\t\t%d (expect a quantization error of %.3f%%, i.e. %.3fns per Add)\n", p.targetAddsPerRound, quantizationError, quantizationError*p.expRuntimePerAdd)
 	fmt.Printf("Add()'s per config:\t\t%d (should result in a benchmarking time of %.2fs per config)\n", totalAddsPerConfig, p.secondsPerConfig)
 	fmt.Printf("Set3 sizes:\t\t\tfrom %d to %d, stepsize %v\n", p.fromSetSize, p.toSetSize, p.step.String())
@@ -284,6 +284,11 @@ func printSetup(p programParametrization, totalAddsPerConfig uint32) {
 	totalduration := predictTotalDuration(p, totalAddsPerConfig)
 	fmt.Printf("Expected total runtime:\t\t%v (assumption: %fns per Add(prng.Uint64()) and 12%% overhead for housekeeping)\n", totalduration, p.expRuntimePerAdd)
 	fmt.Print("\n")
+}
+
+func calcQuantizationError(p programParametrization) float64 {
+	quantizationError := misc.GetSampleTimePrecision() * 100.0 / (p.expRuntimePerAdd * float64(p.targetAddsPerRound))
+	return quantizationError
 }
 
 func predictTotalDuration(p programParametrization, totalAddsPerConfig uint32) time.Duration {
