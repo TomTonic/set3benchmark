@@ -73,9 +73,11 @@ func TestGetNumberOfSteps(t *testing.T) {
 		step     Step
 		expected uint32
 	}{
+		{7, Step{true, true, 1.0, 0}, 101},    // expect: 0%, 1%, 2%, ..., 99%, 100%
 		{33, Step{true, true, 10.0, 0}, 11},   // expect: 0%, 10%, 20%, ..., 90%, 100%
 		{19, Step{true, true, 25.0, 0}, 5},    // expect: 0%, 25%, 50%, 75%, 100%
 		{19, Step{true, true, 30.0, 0}, 5},    // expect: 0%, 30%, 60%, 90%, 120%
+		{712, Step{true, true, 1.5, 0}, 68},   // expect: 0%, 1.5%, 3.0%, ... 97.5%, 99%, 100.5%
 		{234, Step{true, false, 0.0, 1}, 235}, // expect: 0, 1, 2, ..., 233, 234
 		{33, Step{true, false, 0.0, 10}, 5},   // expect: 0, 10, 20, 30, 40
 	}

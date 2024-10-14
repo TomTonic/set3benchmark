@@ -130,10 +130,11 @@ func (p *Step) Type() string {
 func getNumberOfSteps(step Step, limit uint32) uint32 {
 	if step.isPercent {
 		pval := step.percent
-		count := uint32(0)
-		for f := 0.0; f < 100.0+pval; f += pval {
+		count := uint32(100.0 / pval)
+		if float64(count)*pval < 100.0 {
 			count++
 		}
+		count++
 		return count
 	}
 	numberOfSteps := limit / step.integerStep
@@ -280,10 +281,15 @@ func printSetup(p programParametrization, totalAddsPerConfig uint32) {
 	fmt.Printf("Set3 sizes:\t\t\tfrom %d to %d, stepsize %v\n", p.fromSetSize, p.toSetSize, p.step.String())
 	numberOfStepsPerSetSize := getNumberOfSteps(p.step, p.toSetSize)
 	fmt.Printf("Number of configs:\t\t%d\n", numberOfStepsPerSetSize*(p.toSetSize-p.fromSetSize+1))
+	totalduration := predictTotalDuration(p, totalAddsPerConfig, numberOfStepsPerSetSize)
+	fmt.Printf("Expected total runtime:\t\t%v (assumption: %fns per Add(prng.Uint64()) and 12%% overhead for housekeeping)\n", totalduration, p.expRuntimePerAdd)
+	fmt.Print("\n")
+}
+
+func predictTotalDuration(p programParametrization, totalAddsPerConfig uint32, numberOfStepsPerSetSize uint32) time.Duration {
 	totalduration := time.Duration(uint32(p.expRuntimePerAdd * float64(totalAddsPerConfig)))
 	totalduration *= time.Duration(numberOfStepsPerSetSize)
 	totalduration *= time.Duration(p.toSetSize - p.fromSetSize + 1)
 	totalduration = time.Duration(float64(totalduration) * 1.12)
-	fmt.Printf("Expected total runtime:\t\t%v (assumption: %fns per Add(prng.Uint64()) and 12%% overhead for housekeeping)\n", totalduration, p.expRuntimePerAdd)
-	fmt.Print("\n")
+	return totalduration
 }
