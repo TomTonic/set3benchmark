@@ -363,7 +363,7 @@ func TestCalcQuantizationError(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := calcQuantizationError(tt.p)
-			if got >= tt.expectedErrorWin || got <= tt.expectedErrorLin {
+			if got > tt.expectedErrorWin || got < tt.expectedErrorLin {
 				t.Errorf("calcQuantizationError() = %v, want something between %v and %v", got, tt.expectedErrorLin, tt.expectedErrorWin)
 			}
 		})
