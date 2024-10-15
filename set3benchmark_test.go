@@ -289,10 +289,9 @@ func TestMakeSingleAddBenchmarkConfigRandom(t *testing.T) {
 
 func TestPredictTotalDuration(t *testing.T) {
 	tests := []struct {
-		name               string
-		p                  programParametrization
-		totalAddsPerConfig uint32
-		expectedDuration   time.Duration
+		name             string
+		p                programParametrization
+		expectedDuration time.Duration
 	}{
 		{
 			name: "Basic case with integer step",
@@ -304,9 +303,9 @@ func TestPredictTotalDuration(t *testing.T) {
 				toSetSize:        10,
 				fromSetSize:      1,
 				expRuntimePerAdd: 2.0,
+				secondsPerConfig: 1.0,
 			},
-			totalAddsPerConfig: 5,
-			expectedDuration:   time.Duration(1232),
+			expectedDuration: time.Duration(123_200_000_000),
 		},
 		{
 			name: "Large set size with percent step",
@@ -318,15 +317,19 @@ func TestPredictTotalDuration(t *testing.T) {
 				toSetSize:        20,
 				fromSetSize:      5,
 				expRuntimePerAdd: 8,
+				secondsPerConfig: 1.0,
 			},
-			totalAddsPerConfig: 10_000_000,
-			expectedDuration:   time.Duration(1_435_033_600_000),
+			expectedDuration: time.Duration(376_320_000_000),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := predictTotalDuration(tt.p, tt.totalAddsPerConfig)
+			setup, err := benchmarkSetupFrom(tt.p)
+			if err != nil {
+				t.Errorf("error converting %v: %v", tt.p, err)
+			}
+			got := predictTotalDuration(setup)
 			if got != tt.expectedDuration {
 				t.Errorf("predictTotalDuration() = %v, want %v", got, tt.expectedDuration)
 			}
@@ -363,7 +366,8 @@ func TestCalcQuantizationError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := calcQuantizationError(tt.p)
+			setup, _ := benchmarkSetupFrom(tt.p)
+			got := calcQuantizationError(setup)
 			if got > tt.expectedErrorWin || got < tt.expectedErrorLin {
 				t.Errorf("calcQuantizationError() = %v, want something between %v and %v", got, tt.expectedErrorLin, tt.expectedErrorWin)
 			}
