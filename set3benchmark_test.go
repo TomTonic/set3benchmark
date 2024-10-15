@@ -117,30 +117,6 @@ func TestColumnHeadings(t *testing.T) {
 	}
 }
 
-func TestInitSizeValues(t *testing.T) {
-	tests := []struct {
-		start    uint32
-		limit    uint32
-		step     Step
-		expected []uint32
-	}{
-		{10, 11, Step{true, true, 10.0, 0}, []uint32{10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}},
-		{100, 1000, Step{true, true, 25.0, 0}, []uint32{100, 125, 150, 175, 200}},
-		{10, 1, Step{true, true, 30.0, 0}, []uint32{10, 13, 16, 19, 22}},
-		{2, 6, Step{true, false, 0.0, 1}, []uint32{2, 3, 4, 5, 6, 7, 8}},
-		{33, 40, Step{true, false, 0.0, 10}, []uint32{33, 43, 53, 63, 73}},
-	}
-
-	for _, tt := range tests {
-		t.Run("", func(t *testing.T) {
-			result := initSizeValues(tt.start, tt.step, tt.limit)
-			if !reflect.DeepEqual(result, tt.expected) {
-				t.Errorf("got %v, want %v", result, tt.expected)
-			}
-		})
-	}
-}
-
 func TestStep_Set(t *testing.T) {
 	tests := []struct {
 		input    string
@@ -297,6 +273,7 @@ func TestPredictTotalDuration(t *testing.T) {
 			name: "Basic case with integer step",
 			p: programParametrization{
 				step: Step{
+					isSet:       true,
 					isPercent:   false,
 					integerStep: 1,
 				},
@@ -311,6 +288,7 @@ func TestPredictTotalDuration(t *testing.T) {
 			name: "Large set size with percent step",
 			p: programParametrization{
 				step: Step{
+					isSet:     true,
 					isPercent: true,
 					percent:   0.1,
 				},
@@ -319,7 +297,7 @@ func TestPredictTotalDuration(t *testing.T) {
 				expRuntimePerAdd: 8,
 				secondsPerConfig: 1.0,
 			},
-			expectedDuration: time.Duration(376_320_000_000),
+			expectedDuration: time.Duration(17_937_920_000_000),
 		},
 	}
 
@@ -464,6 +442,135 @@ func TestBenchmarkSetupFrom(t *testing.T) {
 			_, err := benchmarkSetupFrom(tt.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("benchmarkSetupFrom() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestSetSizes(t *testing.T) {
+	tests := []struct {
+		name     string
+		setup    benchmarkSetup
+		expected []uint32
+	}{
+		{
+			name: "Normal range",
+			setup: benchmarkSetup{
+				programParametrization: programParametrization{
+					fromSetSize: 1,
+					toSetSize:   5,
+				},
+			},
+			expected: []uint32{1, 2, 3, 4, 5},
+		},
+		{
+			name: "Single value range",
+			setup: benchmarkSetup{
+				programParametrization: programParametrization{
+					fromSetSize: 3,
+					toSetSize:   3,
+				},
+			},
+			expected: []uint32{3},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			i := 0
+			for setSize := range tt.setup.setSizes() {
+				assert.True(t, tt.expected[i] == setSize, "%v!=%v", tt.expected[i], setSize)
+				i++
+			}
+		})
+	}
+}
+
+func TestInitSizes(t *testing.T) {
+	tests := []struct {
+		name     string
+		setup    benchmarkSetup
+		setSize  uint32
+		expected []uint32
+	}{
+		{
+			name: "From 10, +10%",
+			setup: benchmarkSetup{
+				programParametrization: programParametrization{
+					step: Step{
+						isPercent: true,
+						percent:   10.0,
+					},
+					toSetSize: 10,
+				},
+			},
+			setSize:  10,
+			expected: []uint32{10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20},
+		},
+		{
+			name: "From 100, +25%",
+			setup: benchmarkSetup{
+				programParametrization: programParametrization{
+					step: Step{
+						isPercent: true,
+						percent:   25.0,
+					},
+					toSetSize: 100,
+				},
+			},
+			setSize:  100,
+			expected: []uint32{100, 125, 150, 175, 200},
+		},
+		{
+			name: "From 10, +30%",
+			setup: benchmarkSetup{
+				programParametrization: programParametrization{
+					step: Step{
+						isPercent: true,
+						percent:   30.0,
+					},
+					toSetSize: 10,
+				},
+			},
+			setSize:  10,
+			expected: []uint32{10, 13, 16, 19, 22},
+		},
+		{
+			name: "From 2 to 6, +1",
+			setup: benchmarkSetup{
+				programParametrization: programParametrization{
+					step: Step{
+						isPercent:   false,
+						integerStep: 1,
+					},
+					toSetSize: 6,
+				},
+			},
+			setSize:  2,
+			expected: []uint32{2, 3, 4, 5, 6, 7, 8},
+		},
+		{
+			name: "From 33 to 40, +10",
+			setup: benchmarkSetup{
+				programParametrization: programParametrization{
+					step: Step{
+						isPercent:   false,
+						integerStep: 10,
+					},
+					toSetSize: 40,
+				},
+			},
+			setSize:  33,
+			expected: []uint32{33, 43, 53, 63, 73},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			i := 0
+			for initSize := range tt.setup.initSizes(tt.setSize) {
+				assert.True(t, tt.expected[i] == initSize, "%v!=%v", tt.expected[i], initSize)
+				i++
 			}
 		})
 	}

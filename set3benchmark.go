@@ -162,24 +162,6 @@ func columnHeadings(step Step, limit uint32) []string {
 	return result
 }
 
-func initSizeValues(start uint32, step Step, limit uint32) []uint32 {
-	result := make([]uint32, 0, 100)
-	if step.isPercent {
-		pval := step.percent
-		for f := 0.0; f < 100.0+pval; f += pval {
-			retval := start + uint32(math.Round(f*float64(start)/100.0))
-			result = append(result, retval)
-		}
-	} else {
-		numberOfSteps := limit
-		ival := step.integerStep
-		for i := start; i <= start+numberOfSteps; i += ival {
-			result = append(result, i)
-		}
-	}
-	return result
-}
-
 type programParametrization struct {
 	fromSetSize, toSetSize, targetAddsPerRound uint32
 	expRuntimePerAdd, secondsPerConfig         float64
@@ -194,8 +176,8 @@ type benchmarkSetup struct {
 func benchmarkSetupFrom(p programParametrization) (benchmarkSetup, error) {
 	if !p.step.isSet {
 		p.step.isSet = true
-		p.step.isPercent = false
-		p.step.integerStep = 1
+		p.step.isPercent = true
+		p.step.percent = 1.0
 	}
 	result := benchmarkSetup{
 		programParametrization: p,
@@ -215,6 +197,36 @@ func benchmarkSetupFrom(p programParametrization) (benchmarkSetup, error) {
 	}
 
 	return result, nil
+}
+
+func (setup *benchmarkSetup) setSizes() func(yield func(uint32) bool) {
+	return func(yield func(uint32) bool) {
+		for setSize := setup.fromSetSize; setSize <= setup.toSetSize; setSize++ {
+			if !yield(setSize) {
+				return
+			}
+		}
+	}
+}
+
+func (setup *benchmarkSetup) initSizes(setSize uint32) func(yield func(uint32) bool) {
+	if setup.step.isPercent {
+		return func(yield func(uint32) bool) {
+			for f := 0.0; f < 100.0+setup.step.percent; f += setup.step.percent {
+				retval := setSize + uint32(math.Round(f*float64(setSize)/100.0))
+				if !yield(retval) {
+					return
+				}
+			}
+		}
+	}
+	return func(yield func(uint32) bool) {
+		for i := setSize; i <= setSize+setup.toSetSize; i += setup.step.integerStep {
+			if !yield(i) {
+				return
+			}
+		}
+	}
 }
 
 type singleAddBenchmarkConfig struct {
@@ -257,7 +269,7 @@ func main() {
 	flag.Uint32Var(&pp.targetAddsPerRound, "apr", 50_000, "AddsPerRound - instructions between two measurements. Balance between memory consumption (cache!) and timer precision (Windows: 100ns)")
 	flag.Float64Var(&pp.secondsPerConfig, "spc", 1.0, "SecondsPerConfig - estimated benchmark time per configuration in seconds")
 	flag.Float64Var(&pp.expRuntimePerAdd, "erpa", 8.0, "Expected Runtime Per Add - in nanoseconds per instruction. Used to predcict runtimes")
-	flag.Var(&pp.step, "step", "Step to increment headroom of pre-allocated sets. Either percent of set size (e.g. \"2.5%\") or absolut value (e.g. \"2\") (default: 1)")
+	flag.Var(&pp.step, "step", "Step to increment headroom of pre-allocated sets. Either percent of set size (e.g. \"2.5%\") or absolut value (e.g. \"2\") (default: 1%)")
 
 	flag.Parse()
 
@@ -277,10 +289,10 @@ func main() {
 		fmt.Print(columnH)
 	}
 	fmt.Print("\n")
-	for currentSetSize := setup.fromSetSize; currentSetSize <= setup.toSetSize; currentSetSize++ {
-		fmt.Printf("%d ", currentSetSize)
-		for _, initSize := range initSizeValues(currentSetSize, setup.step, setup.toSetSize) {
-			cfg := makeSingleAddBenchmarkConfig(initSize, currentSetSize, setup.targetAddsPerRound, setup.totalAddsPerConfig, 0xABCDEF0123456789)
+	for setSize := range setup.setSizes() {
+		fmt.Printf("%d ", setSize)
+		for initSize := range setup.initSizes(setSize) {
+			cfg := makeSingleAddBenchmarkConfig(initSize, setSize, setup.targetAddsPerRound, setup.totalAddsPerConfig, 0xABCDEF0123456789)
 			measurements := addBenchmark(cfg)
 			nsValues := toNanoSecondsPerAdd(measurements, cfg.actualAddsPerRound)
 			median := misc.Median(nsValues)
