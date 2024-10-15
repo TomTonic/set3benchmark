@@ -395,3 +395,76 @@ func TestPrintTotalRuntime(t *testing.T) {
 		t.Errorf("Output did not match expected format: %v", s)
 	}
 }
+
+func TestBenchmarkSetupFrom(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   programParametrization
+		wantErr bool
+	}{
+		{
+			name: "Valid parameters",
+			input: programParametrization{
+				fromSetSize:        10,
+				toSetSize:          20,
+				targetAddsPerRound: 5,
+				expRuntimePerAdd:   1.0,
+				secondsPerConfig:   10.0,
+			},
+			wantErr: false,
+		},
+		{
+			name: "toSetSize less than fromSetSize",
+			input: programParametrization{
+				fromSetSize:        20,
+				toSetSize:          10,
+				targetAddsPerRound: 5,
+				expRuntimePerAdd:   1.0,
+				secondsPerConfig:   10.0,
+			},
+			wantErr: true,
+		},
+		{
+			name: "toSetSize too big",
+			input: programParametrization{
+				fromSetSize:        10,
+				toSetSize:          1 << 29,
+				targetAddsPerRound: 5,
+				expRuntimePerAdd:   1.0,
+				secondsPerConfig:   10.0,
+			},
+			wantErr: true,
+		},
+		{
+			name: "secondsPerConfig too low",
+			input: programParametrization{
+				fromSetSize:        10,
+				toSetSize:          20,
+				targetAddsPerRound: 5,
+				expRuntimePerAdd:   1.0,
+				secondsPerConfig:   0.0,
+			},
+			wantErr: true,
+		},
+		{
+			name: "targetAddsPerRound too big",
+			input: programParametrization{
+				fromSetSize:        10,
+				toSetSize:          20,
+				targetAddsPerRound: 1000000000,
+				expRuntimePerAdd:   8.0,
+				secondsPerConfig:   0.1,
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := benchmarkSetupFrom(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("benchmarkSetupFrom() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
