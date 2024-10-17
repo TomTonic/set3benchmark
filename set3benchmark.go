@@ -150,7 +150,7 @@ func columnHeadings(step Step, limit uint32) []string {
 	if step.isPercent {
 		pval := step.percent
 		for f := 0.0; f < 100.0+pval; f += pval {
-			result = append(result, fmt.Sprintf("+%.2f%%%% ", f)) // caution: strings are used in fmt.Printf() so encode %% twice
+			result = append(result, fmt.Sprintf("+%.1f%% ", f))
 		}
 	} else {
 		numberOfSteps := limit
@@ -266,8 +266,8 @@ func main() {
 	flag.Uint32Var(&pp.fromSetSize, "from", 100, "First set size to benchmark (inclusive)")
 	flag.Uint32Var(&pp.toSetSize, "to", 200, "Last set size to benchmark (inclusive)")
 	// 50_000 x ~8ns = ~400_000ns; Timer precision 100ns (Windows) => 0,025% error, i.e. 0,02ns per Add()
-	flag.Uint32Var(&pp.targetAddsPerRound, "apr", 50_000, "AddsPerRound - instructions between two measurements. Balance between memory consumption (cache!) and timer precision (Windows: 100ns)")
-	flag.Float64Var(&pp.secondsPerConfig, "spc", 1.0, "SecondsPerConfig - estimated benchmark time per configuration in seconds")
+	flag.Uint32Var(&pp.targetAddsPerRound, "apr", 50_000, "Adds Per Round - instructions between two measurements. Balance between memory consumption (cache!) and timer precision (Windows: 100ns)")
+	flag.Float64Var(&pp.secondsPerConfig, "spc", 1.0, "Seconds Per Config - estimated benchmark time per configuration in seconds")
 	flag.Float64Var(&pp.expRuntimePerAdd, "erpa", 8.0, "Expected Runtime Per Add - in nanoseconds per instruction. Used to predcict runtimes")
 	flag.Var(&pp.step, "step", "Step to increment headroom of pre-allocated sets. Either percent of set size (e.g. \"2.5%\") or absolut value (e.g. \"2\") (default: 1%)")
 
@@ -297,6 +297,7 @@ func main() {
 			nsValues := toNanoSecondsPerAdd(measurements, cfg.actualAddsPerRound)
 			median := misc.Median(nsValues)
 			fmt.Printf("%.3f ", median)
+			// fmt.Printf("%d ", initSize)
 		}
 		fmt.Printf("\n")
 	}
@@ -316,7 +317,7 @@ func printSetup(p benchmarkSetup) {
 	numberOfStepsPerSetSize := getNumberOfSteps(p.step, p.toSetSize)
 	fmt.Printf("Number of configs:\t\t%d\n", numberOfStepsPerSetSize*(p.toSetSize-p.fromSetSize+1))
 	totalduration := predictTotalDuration(p)
-	fmt.Printf("Expected total runtime:\t\t%v (assumption: %fns per Add(prng.Uint64()) and 12%% overhead for housekeeping)\n\n", totalduration, p.expRuntimePerAdd)
+	fmt.Printf("Expected total runtime:\t\t%v (assumption: %.2fns per Add(prng.Uint64()) and 12%% overhead for housekeeping)\n\n", totalduration, p.expRuntimePerAdd)
 }
 
 func calcQuantizationError(p benchmarkSetup) float64 {
