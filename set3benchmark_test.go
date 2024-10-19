@@ -69,32 +69,87 @@ func minVal(measurements []float64) float64 {
 	return min
 }
 
-/*
-	func TestGetNumberOfSteps(t *testing.T) {
-		tests := []struct {
-			limit    uint32
-			step     Step
-			expected uint32
-		}{
-			{7, Step{true, true, 1.0, 0}, 101},    // expect: 0%, 1%, 2%, ..., 99%, 100%
-			{33, Step{true, true, 10.0, 0}, 11},   // expect: 0%, 10%, 20%, ..., 90%, 100%
-			{19, Step{true, true, 25.0, 0}, 5},    // expect: 0%, 25%, 50%, 75%, 100%
-			{19, Step{true, true, 30.0, 0}, 5},    // expect: 0%, 30%, 60%, 90%, 120%
-			{712, Step{true, true, 1.5, 0}, 68},   // expect: 0%, 1.5%, 3.0%, ... 97.5%, 99%, 100.5%
-			{234, Step{true, false, 0.0, 1}, 235}, // expect: 0, 1, 2, ..., 233, 234
-			{33, Step{true, false, 0.0, 10}, 5},   // expect: 0, 10, 20, 30, 40
-		}
+func TestGetNumberOfConfigs(t *testing.T) {
+	oneF := 1.0
+	tenF := 10.0
+	twentyfiveF := 25.0
+	//thirtyF := 30.0
+	onehundretF := 100.0
+	//onepointfiveF := 1.5
+	//oneI := uint32(1)
+	twoI := uint32(2)
+	twentyI := uint32(20)
+	//tenI := uint32(10)
+	onehundretI := uint32(100)
+	tests := []struct {
+		setSizeFrom   uint32
+		setSizeTo     uint32
+		Pstep         *float64
+		Istep         *uint32
+		RelativeLimit *float64
+		AbsoluteLimit *uint32
+		expected      uint32
+	}{
+		{7, 9, &oneF, nil, &onehundretF, nil, 101 * 3},        // expect: 0%, 1%, 2%, ..., 99%, 100% for rows 7, 8 and 9
+		{33, 33, &tenF, nil, &onehundretF, nil, 11},           // expect: 0%, 10%, 20%, ..., 90%, 100% for 1 row
+		{19, 20, &twentyfiveF, nil, &onehundretF, nil, 5 * 2}, // expect: 0%, 25%, 50%, 75%, 100% for 2 rows
 
-		for _, tt := range tests {
-			t.Run("", func(t *testing.T) {
-				result := getNumberOfConfigs(tt.step, tt.limit)
-				if result != tt.expected {
-					t.Errorf("got %d, want %d", result, tt.expected)
-				}
-			})
-		}
+		/*
+			Next test:
+			setSize	Pstep	AbsoluteLimit	Expected
+			50		10%		100				0%	10%	20%	30%	40%	50%	60%	70%	80%	90%	100%
+			51		10%		100				0%	10%	20%	30%	40%	50%	60%	70%	80%	90%	100%
+			52		10%		100				0%	10%	20%	30%	40%	50%	60%	70%	80%	90%	100%
+			53		10%		100				0%	10%	20%	30%	40%	50%	60%	70%	80%	90%
+			54		10%		100				0%	10%	20%	30%	40%	50%	60%	70%	80%	90%
+			55		10%		100				0%	10%	20%	30%	40%	50%	60%	70%	80%	90%
+			56		10%		100				0%	10%	20%	30%	40%	50%	60%	70%	80%
+			57		10%		100				0%	10%	20%	30%	40%	50%	60%	70%	80%
+			58		10%		100				0%	10%	20%	30%	40%	50%	60%	70%	80%
+			59		10%		100				0%	10%	20%	30%	40%	50%	60%	70%
+			60		10%		100				0%	10%	20%	30%	40%	50%	60%	70%
+			61		10%		100				0%	10%	20%	30%	40%	50%	60%	70%
+			62		10%		100				0%	10%	20%	30%	40%	50%	60%	70%
+			63		10%		100				0%	10%	20%	30%	40%	50%	60%
+		*/
+		{50, 63, &tenF, nil, nil, &onehundretI, 129},
+
+		/*
+			Next test:
+			setSize	Istep	RelativeLimit	Expected
+			5		2		100%			+0	+2	+4	+6
+			6		2		100%			+0	+2	+4	+6
+			7		2		100%			+0	+2	+4	+6	+8
+			8		2		100%			+0	+2	+4	+6	+8
+			9		2		100%			+0	+2	+4	+6	+8	+10
+		*/
+		{5, 9, nil, &twoI, &onehundretF, nil, 24},
+
+		/*
+			Next test:
+			setSize	Istep	AbsoluteLimit	Expected
+			5		2		20				+0	+2	+4	+6	+8	+10	+12	+14	+16
+			6		2		20				+0	+2	+4	+6	+8	+10	+12	+14
+			7		2		20				+0	+2	+4	+6	+8	+10	+12	+14
+			8		2		20				+0	+2	+4	+6	+8	+10	+12
+		*/
+		{5, 8, nil, &twoI, nil, &twentyI, 32},
+
+		//{19, Step{true, true, 30.0, 0}, 5},                    // expect: 0%, 30%, 60%, 90%, 120%
+		//{712, Step{true, true, 1.5, 0}, 68},                   // expect: 0%, 1.5%, 3.0%, ... 97.5%, 99%, 100.5%
+		//{234, Step{true, false, 0.0, 1}, 235},                 // expect: 0, 1, 2, ..., 233, 234
+		//{33, Step{true, false, 0.0, 10}, 5},                   // expect: 0, 10, 20, 30, 40
 	}
-*/
+
+	for _, tt := range tests {
+		t.Run("", func(t *testing.T) {
+			result := getNumberOfConfigs(tt.setSizeFrom, tt.setSizeTo, tt.Pstep, tt.Istep, tt.RelativeLimit, tt.AbsoluteLimit)
+			if result != tt.expected {
+				t.Errorf("got %d, want %d", result, tt.expected)
+			}
+		})
+	}
+}
 
 func TestStepsHeadings(t *testing.T) {
 	tenF := 10.0
@@ -270,7 +325,7 @@ func TestPredictTotalDuration(t *testing.T) {
 				expRuntimePerAdd:   2.0,
 				secondsPerConfig:   1.0,
 			},
-			expectedDuration: time.Duration(123_200_000_000),
+			expectedDuration: time.Duration(72_800_000_000),
 		},
 		{
 			name: "Large set size with percent step",
@@ -283,7 +338,7 @@ func TestPredictTotalDuration(t *testing.T) {
 				expRuntimePerAdd:   8,
 				secondsPerConfig:   1.0,
 			},
-			expectedDuration: time.Duration(17_937_920_000_000),
+			expectedDuration: time.Duration(17_955_840_000_000),
 		},
 	}
 
@@ -438,36 +493,29 @@ func TestBenchmarkSetupFrom(t *testing.T) {
 
 func TestSetSizes(t *testing.T) {
 	tests := []struct {
-		name     string
-		setup    benchmarkSetup
-		expected []uint32
+		name        string
+		fromSetSize uint32
+		toSetSize   uint32
+		expected    []uint32
 	}{
 		{
-			name: "Normal range",
-			setup: benchmarkSetup{
-				programParametrization: programParametrization{
-					fromSetSize: 1,
-					toSetSize:   5,
-				},
-			},
-			expected: []uint32{1, 2, 3, 4, 5},
+			name:        "Normal range",
+			fromSetSize: 1,
+			toSetSize:   5,
+			expected:    []uint32{1, 2, 3, 4, 5},
 		},
 		{
-			name: "Single value range",
-			setup: benchmarkSetup{
-				programParametrization: programParametrization{
-					fromSetSize: 3,
-					toSetSize:   3,
-				},
-			},
-			expected: []uint32{3},
+			name:        "Single value range",
+			fromSetSize: 3,
+			toSetSize:   3,
+			expected:    []uint32{3},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			i := 0
-			for setSize := range tt.setup.setSizes() {
+			for setSize := range setSizes(tt.fromSetSize, tt.toSetSize) {
 				assert.True(t, tt.expected[i] == setSize, "%v!=%v", tt.expected[i], setSize)
 				i++
 			}
@@ -479,70 +527,34 @@ func TestInitSizes(t *testing.T) {
 	tenF := 10.0
 	twentifiveF := 25.0
 	onehundretF := 100.0
+	twoI := uint32(2)
+	twentyI := uint32(20)
+	onehundretI := uint32(100)
 	tests := []struct {
 		name          string
 		setSize       uint32
-		fromSetSize   uint32
-		toSetSize     uint32
 		Pstep         *float64
 		Istep         *uint32
 		RelativeLimit *float64
 		AbsoluteLimit *uint32
 		expected      []uint32
 	}{
-		{"From 10, +10%", 10, 10, 10, &tenF, nil, &onehundretF, nil, []uint32{10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}},
-		{"From 100, +25%", 100, 100, 100, &twentifiveF, nil, &onehundretF, nil, []uint32{100, 125, 150, 175, 200}},
-		/*		{
-					name: "From 10, +30%",
-					setup: benchmarkSetup{
-						programParametrization: programParametrization{
-							step: Step{
-								isPercent: true,
-								percent:   30.0,
-							},
-							toSetSize: 10,
-						},
-					},
-					setSize:  10,
-					expected: []uint32{10, 13, 16, 19, 22},
-				},
-				{
-					name: "From 2 to 6, +1",
-					setup: benchmarkSetup{
-						programParametrization: programParametrization{
-							step: Step{
-								isPercent:   false,
-								integerStep: 1,
-							},
-							toSetSize: 6,
-						},
-					},
-					setSize:  2,
-					expected: []uint32{2, 3, 4, 5, 6, 7, 8},
-				},
-				{
-					name: "From 33 to 40, +10",
-					setup: benchmarkSetup{
-						programParametrization: programParametrization{
-							step: Step{
-								isPercent:   false,
-								integerStep: 10,
-							},
-							toSetSize: 40,
-						},
-					},
-					setSize:  33,
-					expected: []uint32{33, 43, 53, 63, 73},
-				},
-		*/
+		{"SetSize 10, +10%, up to +100%", 10, &tenF, nil, &onehundretF, nil, []uint32{10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}},
+		{"SetSize 100, +25%, up to +100%", 100, &twentifiveF, nil, &onehundretF, nil, []uint32{100, 125, 150, 175, 200}},
+		{"SetSize 53, +10%, up to 100", 53, &tenF, nil, nil, &onehundretI, []uint32{53, 58, 64, 69, 74, 80, 85, 90, 95, 101}},
+		{"SetSize 7, +2, up to +100%", 7, nil, &twoI, &onehundretF, nil, []uint32{7, 9, 11, 13, 15}},
+		{"SetSize 6, +2, up to 20", 6, nil, &twoI, nil, &twentyI, []uint32{6, 8, 10, 12, 14, 16, 18, 20}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			i := 0
-			for initSize := range initSizes2(tt.setSize, tt.fromSetSize, tt.toSetSize, tt.Pstep, tt.Istep, tt.RelativeLimit, tt.AbsoluteLimit) {
-				assert.True(t, tt.expected[i] == initSize, "%v!=%v", tt.expected[i], initSize)
-				i++
+			result := make([]uint32, 0, len(tt.expected))
+			for initSize := range initSizes2(tt.setSize, tt.Pstep, tt.Istep, tt.RelativeLimit, tt.AbsoluteLimit) {
+				result = append(result, initSize)
+			}
+
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("got %v, want %v", result, tt.expected)
 			}
 		})
 	}

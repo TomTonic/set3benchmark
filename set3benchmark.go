@@ -77,10 +77,10 @@ func printTotalRuntime(start time.Time) string {
 	return fmt.Sprintf("\nTotal runtime of benchmark: %v\n", end.Sub(start))
 }
 
-func getNumberOfConfigs(setup benchmarkSetup) uint32 {
+func getNumberOfConfigs(setSizeFrom, setSizeTo uint32, Pstep *float64, Istep *uint32, RelativeLimit *float64, AbsoluteLimit *uint32) uint32 {
 	result := uint32(0)
-	for setSize := range setup.setSizes() {
-		for range initSizes2(setSize, setup.fromSetSize, setup.toSetSize, setup.Pstep, setup.Istep, setup.RelativeLimit, setup.AbsoluteLimit) {
+	for setSize := range setSizes(setSizeFrom, setSizeTo) {
+		for range initSizes2(setSize, Pstep, Istep, RelativeLimit, AbsoluteLimit) {
 			result++
 		}
 	}
@@ -139,9 +139,9 @@ func benchmarkSetupFrom(p programParametrization) (benchmarkSetup, error) {
 	return result, nil
 }
 
-func (setup *benchmarkSetup) setSizes() func(yield func(uint32) bool) {
+func setSizes(setSizeFrom, setSizeTo uint32) func(yield func(uint32) bool) {
 	return func(yield func(uint32) bool) {
-		for setSize := setup.fromSetSize; setSize <= setup.toSetSize; setSize++ {
+		for setSize := setSizeFrom; setSize <= setSizeTo; setSize++ {
 			if !yield(setSize) {
 				return
 			}
@@ -251,7 +251,7 @@ func stepsHeadings(setSizeFrom, setSizeTo uint32, Pstep *float64, Istep *uint32,
 	return result, nil
 }
 
-func initSizes2(setSize uint32, setSizeFrom, setSizeTo uint32, Pstep *float64, Istep *uint32, RelativeLimit *float64, AbsoluteLimit *uint32) func(yield func(uint32) bool) {
+func initSizes2(setSize uint32, Pstep *float64, Istep *uint32, RelativeLimit *float64, AbsoluteLimit *uint32) func(yield func(uint32) bool) {
 	if Pstep != nil && RelativeLimit != nil {
 		start := float64(0)
 		limit := (*RelativeLimit) + (*Pstep)
@@ -266,7 +266,7 @@ func initSizes2(setSize uint32, setSizeFrom, setSizeTo uint32, Pstep *float64, I
 	}
 	if Pstep != nil && AbsoluteLimit != nil {
 		start := float64(0)
-		factor := float64(*AbsoluteLimit) / float64(setSizeFrom)
+		factor := float64(*AbsoluteLimit) / float64(setSize)
 		limit := (factor-1.0)*100.0 + *Pstep
 		return func(yield func(uint32) bool) {
 			for f := start; f < limit; f += (*Pstep) {
@@ -279,10 +279,11 @@ func initSizes2(setSize uint32, setSizeFrom, setSizeTo uint32, Pstep *float64, I
 	}
 	if Istep != nil && RelativeLimit != nil {
 		start := uint32(0)
-		limit := uint32((math.Round(*RelativeLimit * float64(setSizeTo) / 100.0))) + (*Istep)
+		limit := uint32((math.Round(*RelativeLimit * float64(setSize) / 100.0))) + (*Istep)
 		return func(yield func(uint32) bool) {
-			for i := setSize + start; i < setSize+limit; i += (*Istep) {
-				if !yield(i) {
+			for i := start; i < limit; i += (*Istep) {
+				retval := setSize + i
+				if !yield(retval) {
 					return
 				}
 			}
@@ -290,10 +291,11 @@ func initSizes2(setSize uint32, setSizeFrom, setSizeTo uint32, Pstep *float64, I
 	}
 	if Istep != nil && AbsoluteLimit != nil {
 		start := uint32(0)
-		limit := (*AbsoluteLimit) - setSizeFrom + (*Istep)
+		limit := (*AbsoluteLimit) - setSize + (*Istep)
 		return func(yield func(uint32) bool) {
-			for i := setSize + start; i < setSize+limit; i += (*Istep) {
-				if !yield(i) {
+			for i := start; i < limit; i += (*Istep) {
+				retval := setSize + i
+				if !yield(retval) {
 					return
 				}
 			}
@@ -395,9 +397,9 @@ func main() {
 		fmt.Print(columnH)
 	}
 	fmt.Print("\n")
-	for setSize := range setup.setSizes() {
+	for setSize := range setSizes(setup.fromSetSize, setup.toSetSize) {
 		fmt.Printf("%d ", setSize)
-		for initSize := range initSizes2(setSize, setup.fromSetSize, setup.toSetSize, setup.Pstep, setup.Istep, setup.RelativeLimit, setup.AbsoluteLimit) {
+		for initSize := range initSizes2(setSize, setup.Pstep, setup.Istep, setup.RelativeLimit, setup.AbsoluteLimit) {
 			cfg := makeSingleAddBenchmarkConfig(initSize, setSize, setup.targetAddsPerRound, setup.totalAddsPerConfig, 0xABCDEF0123456789)
 			measurements := addBenchmark(cfg)
 			nsValues := toNanoSecondsPerAdd(measurements, cfg.actualAddsPerRound)
@@ -421,7 +423,7 @@ func printSetup(p benchmarkSetup) {
 	fmt.Printf("Add()'s per config:\t\t%d (should result in a benchmarking time of %.2fs per config)\n", p.totalAddsPerConfig, p.secondsPerConfig)
 	//	fmt.Printf("Set3 sizes:\t\t\tfrom %d to %d, stepsize %v\n", p.fromSetSize, p.toSetSize, p.step.String())
 	fmt.Printf("Set3 sizes:\t\t\tfrom %d to %d\n", p.fromSetSize, p.toSetSize)
-	numberOfConfigs := getNumberOfConfigs(p)
+	numberOfConfigs := getNumberOfConfigs(p.fromSetSize, p.toSetSize, p.Pstep, p.Istep, p.RelativeLimit, p.AbsoluteLimit)
 	fmt.Printf("Number of configs:\t\t%d\n", numberOfConfigs)
 	totalduration := predictTotalDuration(p)
 	fmt.Printf("Expected total runtime:\t\t%v (assumption: %.2fns per Add(prng.Uint64()) and 12%% overhead for housekeeping)\n\n", totalduration, p.expRuntimePerAdd)
@@ -433,7 +435,7 @@ func calcQuantizationError(p benchmarkSetup) float64 {
 }
 
 func predictTotalDuration(p benchmarkSetup) time.Duration {
-	numberOfStepsPerSetSize := getNumberOfConfigs(p)
+	numberOfStepsPerSetSize := getNumberOfConfigs(p.fromSetSize, p.toSetSize, p.Pstep, p.Istep, p.RelativeLimit, p.AbsoluteLimit)
 	totalduration := time.Duration(uint32(p.expRuntimePerAdd * float64(p.totalAddsPerConfig)))
 	totalduration *= time.Duration(numberOfStepsPerSetSize)
 	totalduration = time.Duration(float64(totalduration) * 1.12)
