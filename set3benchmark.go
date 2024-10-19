@@ -195,7 +195,9 @@ func benchmarkSetupFrom(p programParametrization) (benchmarkSetup, error) {
 	if p.targetAddsPerRound > result.totalAddsPerConfig {
 		return result, errors.New("parameter error: AddsPerRound 'apr' too big for SecondsPerConfig 'spc'")
 	}
-
+	if p.targetAddsPerRound < result.toSetSize {
+		return result, errors.New("parameter error: AddsPerRound 'apr' too small for 'to'")
+	}
 	return result, nil
 }
 
@@ -208,6 +210,72 @@ func (setup *benchmarkSetup) setSizes() func(yield func(uint32) bool) {
 		}
 	}
 }
+
+func stepsHeadings(setSize uint32, Pstep *float64, Istep *uint32, RelativeLimit *float64, AbsoluteLimit *uint32) ([]string, error) {
+	result := make([]string, 0, 100)
+	if Pstep == nil && Istep == nil {
+		return nil, errors.New("Pstep == nil && Istep == nil")
+	}
+	if Pstep != nil && Istep != nil {
+		return nil, errors.New("Pstep != nil && Istep != nil")
+	}
+	if RelativeLimit == nil && AbsoluteLimit == nil {
+		return nil, errors.New("RelativeLimit == nil && Istep == nil")
+	}
+	if RelativeLimit != nil && AbsoluteLimit != nil {
+		return nil, errors.New("RelativeLimit != nil && AbsoluteLimit != nil")
+	}
+	if Pstep != nil && RelativeLimit != nil {
+		start := float64(0)
+		limit := (*RelativeLimit) + (*Pstep)
+		for f := start; f < limit; f += (*Pstep) {
+			result = append(result, fmt.Sprintf("+%.1f%% ", f))
+		}
+	}
+	if Pstep != nil && AbsoluteLimit != nil {
+		start := float64(0)
+		factor := float64(*AbsoluteLimit) / float64(setSize)
+		limit := (factor-1.0)*100.0 + *Pstep
+		for f := start; f < limit; f += (*Pstep) {
+			result = append(result, fmt.Sprintf("+%.1f%% ", f))
+		}
+	}
+	if Istep != nil && RelativeLimit != nil {
+		start := uint32(0)
+		limit := uint32((math.Round(*RelativeLimit * float64(setSize) / 100.0))) + (*Istep)
+		for i := start; i < limit; i += (*Istep) {
+			result = append(result, fmt.Sprintf("+%d ", i))
+		}
+	}
+	if Istep != nil && AbsoluteLimit != nil {
+		start := uint32(0)
+		limit := (*AbsoluteLimit) + (*Istep)
+		for i := start; i < limit; i += (*Istep) {
+			result = append(result, fmt.Sprintf("+%d ", i))
+		}
+	}
+	return result, nil
+}
+
+/*
+func getNumberOfStepsNew(setSizeFrom, setSizeTo uint32, Pstep *float64, Istep *uint32, RelativeLimit *float64, AbsoluteLimit *uint32) uint32 {
+	if Pstep != nil && RelativeLimit != nil {
+		count := uint32(*RelativeLimit / *Pstep)
+		if float64(count)*(*Pstep) < *RelativeLimit {
+			count++
+		}
+		count++
+		return count
+	}
+	if Pstep != nil && AbsoluteLimit != nil {
+	}
+	numberOfSteps := *AbsoluteLimit / *Istep
+	if *AbsoluteLimit%*Istep != 0 {
+		numberOfSteps++
+	}
+	return numberOfSteps + 1
+}
+*/
 
 func (setup *benchmarkSetup) initSizes(setSize uint32) func(yield func(uint32) bool) {
 	if setup.step.isPercent {

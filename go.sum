@@ -1,5 +1,7 @@
 github.com/TomTonic/Set3 v0.4.0 h1:onCBe/ZWOLPhbuYGuy7834rkVc9WQSi47OwCo1i0xXY=
 github.com/TomTonic/Set3 v0.4.0/go.mod h1:Pz6gcxmq/O8Kwz3nkQfs4jy9gKd7WFKl6odnC09ZrHc=
+github.com/alecthomas/kong v1.2.1 h1:E8jH4Tsgv6wCRX2nGrdPyHDUCSG83WH2qE4XLACD33Q=
+github.com/alecthomas/kong v1.2.1/go.mod h1:rKTSFhbdp3Ryefn8x5MOEprnRFQ7nlmMC01GKhehhBM=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dolthub/maphash v0.1.0 h1:bsQ7JsF4FkkWyrP3oCnFJgrCUAFbFf3kOl4L/QxPDyQ=

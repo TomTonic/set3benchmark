@@ -117,6 +117,62 @@ func TestColumnHeadings(t *testing.T) {
 	}
 }
 
+func TestStepsHeadings(t *testing.T) {
+	tenF := 10.0
+	twentyfiveF := 25.0
+	thirtyF := 30.0
+	onehundretF := 100.0
+	tenI := uint32(10)
+	twentyfiveI := uint32(25)
+	thirtyI := uint32(30)
+	onehundretI := uint32(100)
+	tests := []struct {
+		setSize       uint32
+		Pstep         *float64
+		Istep         *uint32
+		RelativeLimit *float64
+		AbsoluteLimit *uint32
+		err           bool
+		expected      []string
+	}{
+		// Pstep && RelativeLimit
+		{5, &tenF, nil, &onehundretF, nil, false, []string{"+0.0% ", "+10.0% ", "+20.0% ", "+30.0% ", "+40.0% ", "+50.0% ", "+60.0% ", "+70.0% ", "+80.0% ", "+90.0% ", "+100.0% "}},
+		{5, &twentyfiveF, nil, &onehundretF, nil, false, []string{"+0.0% ", "+25.0% ", "+50.0% ", "+75.0% ", "+100.0% "}},
+		{5, &thirtyF, nil, &onehundretF, nil, false, []string{"+0.0% ", "+30.0% ", "+60.0% ", "+90.0% ", "+120.0% "}},
+
+		// Istep && AbsoluteLimit
+		{5, nil, &tenI, nil, &onehundretI, false, []string{"+0 ", "+10 ", "+20 ", "+30 ", "+40 ", "+50 ", "+60 ", "+70 ", "+80 ", "+90 ", "+100 "}},
+		{5, nil, &twentyfiveI, nil, &onehundretI, false, []string{"+0 ", "+25 ", "+50 ", "+75 ", "+100 "}},
+		{5, nil, &thirtyI, nil, &onehundretI, false, []string{"+0 ", "+30 ", "+60 ", "+90 ", "+120 "}},
+
+		// Istep & RelativeLimit
+		{50, nil, &tenI, &onehundretF, nil, false, []string{"+0 ", "+10 ", "+20 ", "+30 ", "+40 ", "+50 "}},
+		{100, nil, &twentyfiveI, &thirtyF, nil, false, []string{"+0 ", "+25 ", "+50 "}},
+
+		// Pstep & AbsoluteLimit
+		{50, &tenF, nil, nil, &onehundretI, false, []string{"+0.0% ", "+10.0% ", "+20.0% ", "+30.0% ", "+40.0% ", "+50.0% ", "+60.0% ", "+70.0% ", "+80.0% ", "+90.0% ", "+100.0% "}},
+		{1, &onehundretF, nil, nil, &tenI, false, []string{"+0.0% ", "+100.0% ", "+200.0% ", "+300.0% ", "+400.0% ", "+500.0% ", "+600.0% ", "+700.0% ", "+800.0% ", "+900.0% "}},
+
+		// error cases
+		{1, nil, nil, nil, &tenI, true, []string{}},
+		{1, &tenF, &tenI, nil, &onehundretI, true, []string{}},
+		{1, &tenF, nil, nil, nil, true, []string{}},
+		{1, &tenF, nil, &onehundretF, &onehundretI, true, []string{}},
+	}
+
+	for _, tt := range tests {
+		t.Run("", func(t *testing.T) {
+			result, err := stepsHeadings(tt.setSize, tt.Pstep, tt.Istep, tt.RelativeLimit, tt.AbsoluteLimit)
+			if err != nil != tt.err {
+				t.Errorf("returned error: got error '%v', wanted error %v", err, tt.err)
+			}
+			if !tt.err && !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("got %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
 func TestStep_Set(t *testing.T) {
 	tests := []struct {
 		input    string
@@ -277,10 +333,11 @@ func TestPredictTotalDuration(t *testing.T) {
 					isPercent:   false,
 					integerStep: 1,
 				},
-				toSetSize:        10,
-				fromSetSize:      1,
-				expRuntimePerAdd: 2.0,
-				secondsPerConfig: 1.0,
+				targetAddsPerRound: 10,
+				toSetSize:          10,
+				fromSetSize:        1,
+				expRuntimePerAdd:   2.0,
+				secondsPerConfig:   1.0,
 			},
 			expectedDuration: time.Duration(123_200_000_000),
 		},
@@ -292,10 +349,11 @@ func TestPredictTotalDuration(t *testing.T) {
 					isPercent: true,
 					percent:   0.1,
 				},
-				toSetSize:        20,
-				fromSetSize:      5,
-				expRuntimePerAdd: 8,
-				secondsPerConfig: 1.0,
+				targetAddsPerRound: 20,
+				toSetSize:          20,
+				fromSetSize:        5,
+				expRuntimePerAdd:   8,
+				secondsPerConfig:   1.0,
 			},
 			expectedDuration: time.Duration(17_937_920_000_000),
 		},
@@ -385,7 +443,7 @@ func TestBenchmarkSetupFrom(t *testing.T) {
 			input: programParametrization{
 				fromSetSize:        10,
 				toSetSize:          20,
-				targetAddsPerRound: 5,
+				targetAddsPerRound: 20,
 				expRuntimePerAdd:   1.0,
 				secondsPerConfig:   10.0,
 			},
@@ -432,6 +490,17 @@ func TestBenchmarkSetupFrom(t *testing.T) {
 				targetAddsPerRound: 1000000000,
 				expRuntimePerAdd:   8.0,
 				secondsPerConfig:   0.1,
+			},
+			wantErr: true,
+		},
+		{
+			name: "targetAddsPerRound too small for 'to'",
+			input: programParametrization{
+				fromSetSize:        10,
+				toSetSize:          20,
+				targetAddsPerRound: 5,
+				expRuntimePerAdd:   1.0,
+				secondsPerConfig:   10.0,
 			},
 			wantErr: true,
 		},
