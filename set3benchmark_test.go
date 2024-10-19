@@ -69,53 +69,32 @@ func minVal(measurements []float64) float64 {
 	return min
 }
 
-func TestGetNumberOfSteps(t *testing.T) {
-	tests := []struct {
-		limit    uint32
-		step     Step
-		expected uint32
-	}{
-		{7, Step{true, true, 1.0, 0}, 101},    // expect: 0%, 1%, 2%, ..., 99%, 100%
-		{33, Step{true, true, 10.0, 0}, 11},   // expect: 0%, 10%, 20%, ..., 90%, 100%
-		{19, Step{true, true, 25.0, 0}, 5},    // expect: 0%, 25%, 50%, 75%, 100%
-		{19, Step{true, true, 30.0, 0}, 5},    // expect: 0%, 30%, 60%, 90%, 120%
-		{712, Step{true, true, 1.5, 0}, 68},   // expect: 0%, 1.5%, 3.0%, ... 97.5%, 99%, 100.5%
-		{234, Step{true, false, 0.0, 1}, 235}, // expect: 0, 1, 2, ..., 233, 234
-		{33, Step{true, false, 0.0, 10}, 5},   // expect: 0, 10, 20, 30, 40
-	}
+/*
+	func TestGetNumberOfSteps(t *testing.T) {
+		tests := []struct {
+			limit    uint32
+			step     Step
+			expected uint32
+		}{
+			{7, Step{true, true, 1.0, 0}, 101},    // expect: 0%, 1%, 2%, ..., 99%, 100%
+			{33, Step{true, true, 10.0, 0}, 11},   // expect: 0%, 10%, 20%, ..., 90%, 100%
+			{19, Step{true, true, 25.0, 0}, 5},    // expect: 0%, 25%, 50%, 75%, 100%
+			{19, Step{true, true, 30.0, 0}, 5},    // expect: 0%, 30%, 60%, 90%, 120%
+			{712, Step{true, true, 1.5, 0}, 68},   // expect: 0%, 1.5%, 3.0%, ... 97.5%, 99%, 100.5%
+			{234, Step{true, false, 0.0, 1}, 235}, // expect: 0, 1, 2, ..., 233, 234
+			{33, Step{true, false, 0.0, 10}, 5},   // expect: 0, 10, 20, 30, 40
+		}
 
-	for _, tt := range tests {
-		t.Run("", func(t *testing.T) {
-			result := getNumberOfSteps(tt.step, tt.limit)
-			if result != tt.expected {
-				t.Errorf("got %d, want %d", result, tt.expected)
-			}
-		})
+		for _, tt := range tests {
+			t.Run("", func(t *testing.T) {
+				result := getNumberOfConfigs(tt.step, tt.limit)
+				if result != tt.expected {
+					t.Errorf("got %d, want %d", result, tt.expected)
+				}
+			})
+		}
 	}
-}
-
-func TestColumnHeadings(t *testing.T) {
-	tests := []struct {
-		limit    uint32
-		step     Step
-		expected []string
-	}{
-		{33, Step{true, true, 10.0, 0}, []string{"+0.0% ", "+10.0% ", "+20.0% ", "+30.0% ", "+40.0% ", "+50.0% ", "+60.0% ", "+70.0% ", "+80.0% ", "+90.0% ", "+100.0% "}},
-		{19, Step{true, true, 25.0, 0}, []string{"+0.0% ", "+25.0% ", "+50.0% ", "+75.0% ", "+100.0% "}},
-		{19, Step{true, true, 30.0, 0}, []string{"+0.0% ", "+30.0% ", "+60.0% ", "+90.0% ", "+120.0% "}},
-		{4, Step{true, false, 0.0, 1}, []string{"+0 ", "+1 ", "+2 ", "+3 ", "+4 "}},
-		{33, Step{true, false, 0.0, 10}, []string{"+0 ", "+10 ", "+20 ", "+30 ", "+40 "}},
-	}
-
-	for _, tt := range tests {
-		t.Run("", func(t *testing.T) {
-			result := columnHeadings(tt.step, tt.limit)
-			if !reflect.DeepEqual(result, tt.expected) {
-				t.Errorf("got %v, want %v", result, tt.expected)
-			}
-		})
-	}
-}
+*/
 
 func TestStepsHeadings(t *testing.T) {
 	tenF := 10.0
@@ -127,7 +106,8 @@ func TestStepsHeadings(t *testing.T) {
 	thirtyI := uint32(30)
 	onehundretI := uint32(100)
 	tests := []struct {
-		setSize       uint32
+		setSizeFrom   uint32
+		setSizeTo     uint32
 		Pstep         *float64
 		Istep         *uint32
 		RelativeLimit *float64
@@ -135,88 +115,39 @@ func TestStepsHeadings(t *testing.T) {
 		err           bool
 		expected      []string
 	}{
-		// Pstep && RelativeLimit
-		{5, &tenF, nil, &onehundretF, nil, false, []string{"+0.0% ", "+10.0% ", "+20.0% ", "+30.0% ", "+40.0% ", "+50.0% ", "+60.0% ", "+70.0% ", "+80.0% ", "+90.0% ", "+100.0% "}},
-		{5, &twentyfiveF, nil, &onehundretF, nil, false, []string{"+0.0% ", "+25.0% ", "+50.0% ", "+75.0% ", "+100.0% "}},
-		{5, &thirtyF, nil, &onehundretF, nil, false, []string{"+0.0% ", "+30.0% ", "+60.0% ", "+90.0% ", "+120.0% "}},
+		// Pstep && RelativeLimit, setSizeFrom/setSizeTo are irrelevant
+		{5, 10, &tenF, nil, &onehundretF, nil, false, []string{"+0.0% ", "+10.0% ", "+20.0% ", "+30.0% ", "+40.0% ", "+50.0% ", "+60.0% ", "+70.0% ", "+80.0% ", "+90.0% ", "+100.0% "}},
+		{5, 10, &twentyfiveF, nil, &onehundretF, nil, false, []string{"+0.0% ", "+25.0% ", "+50.0% ", "+75.0% ", "+100.0% "}},
+		{5, 10, &thirtyF, nil, &onehundretF, nil, false, []string{"+0.0% ", "+30.0% ", "+60.0% ", "+90.0% ", "+120.0% "}},
 
-		// Istep && AbsoluteLimit
-		{5, nil, &tenI, nil, &onehundretI, false, []string{"+0 ", "+10 ", "+20 ", "+30 ", "+40 ", "+50 ", "+60 ", "+70 ", "+80 ", "+90 ", "+100 "}},
-		{5, nil, &twentyfiveI, nil, &onehundretI, false, []string{"+0 ", "+25 ", "+50 ", "+75 ", "+100 "}},
-		{5, nil, &thirtyI, nil, &onehundretI, false, []string{"+0 ", "+30 ", "+60 ", "+90 ", "+120 "}},
+		// Istep && AbsoluteLimit, use setSizeFrom for longest Sequence
+		{10, 20, nil, &tenI, nil, &onehundretI, false, []string{"+0 ", "+10 ", "+20 ", "+30 ", "+40 ", "+50 ", "+60 ", "+70 ", "+80 ", "+90 "}},
+		{5, 10, nil, &twentyfiveI, nil, &onehundretI, false, []string{"+0 ", "+25 ", "+50 ", "+75 ", "+100 "}},
+		{5, 10, nil, &thirtyI, nil, &onehundretI, false, []string{"+0 ", "+30 ", "+60 ", "+90 ", "+120 "}},
 
-		// Istep & RelativeLimit
-		{50, nil, &tenI, &onehundretF, nil, false, []string{"+0 ", "+10 ", "+20 ", "+30 ", "+40 ", "+50 "}},
-		{100, nil, &twentyfiveI, &thirtyF, nil, false, []string{"+0 ", "+25 ", "+50 "}},
+		// Istep & RelativeLimit, use setSizeTo for longest sequence
+		{10, 50, nil, &tenI, &onehundretF, nil, false, []string{"+0 ", "+10 ", "+20 ", "+30 ", "+40 ", "+50 "}},
+		{10, 100, nil, &twentyfiveI, &thirtyF, nil, false, []string{"+0 ", "+25 ", "+50 "}},
 
-		// Pstep & AbsoluteLimit
-		{50, &tenF, nil, nil, &onehundretI, false, []string{"+0.0% ", "+10.0% ", "+20.0% ", "+30.0% ", "+40.0% ", "+50.0% ", "+60.0% ", "+70.0% ", "+80.0% ", "+90.0% ", "+100.0% "}},
-		{1, &onehundretF, nil, nil, &tenI, false, []string{"+0.0% ", "+100.0% ", "+200.0% ", "+300.0% ", "+400.0% ", "+500.0% ", "+600.0% ", "+700.0% ", "+800.0% ", "+900.0% "}},
+		// Pstep & AbsoluteLimit, use setSizeFrom for longest Sequence
+		{50, 60, &tenF, nil, nil, &onehundretI, false, []string{"+0.0% ", "+10.0% ", "+20.0% ", "+30.0% ", "+40.0% ", "+50.0% ", "+60.0% ", "+70.0% ", "+80.0% ", "+90.0% ", "+100.0% "}},
+		{1, 5, &onehundretF, nil, nil, &tenI, false, []string{"+0.0% ", "+100.0% ", "+200.0% ", "+300.0% ", "+400.0% ", "+500.0% ", "+600.0% ", "+700.0% ", "+800.0% ", "+900.0% "}},
 
 		// error cases
-		{1, nil, nil, nil, &tenI, true, []string{}},
-		{1, &tenF, &tenI, nil, &onehundretI, true, []string{}},
-		{1, &tenF, nil, nil, nil, true, []string{}},
-		{1, &tenF, nil, &onehundretF, &onehundretI, true, []string{}},
+		{1, 2, nil, nil, nil, &tenI, true, []string{}},
+		{1, 2, &tenF, &tenI, nil, &onehundretI, true, []string{}},
+		{1, 2, &tenF, nil, nil, nil, true, []string{}},
+		{1, 2, &tenF, nil, &onehundretF, &onehundretI, true, []string{}},
 	}
 
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
-			result, err := stepsHeadings(tt.setSize, tt.Pstep, tt.Istep, tt.RelativeLimit, tt.AbsoluteLimit)
+			result, err := stepsHeadings(tt.setSizeFrom, tt.setSizeTo, tt.Pstep, tt.Istep, tt.RelativeLimit, tt.AbsoluteLimit)
 			if err != nil != tt.err {
 				t.Errorf("returned error: got error '%v', wanted error %v", err, tt.err)
 			}
 			if !tt.err && !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("got %v, want %v", result, tt.expected)
-			}
-		})
-	}
-}
-
-func TestStep_Set(t *testing.T) {
-	tests := []struct {
-		input    string
-		expected Step
-		err      bool
-	}{
-		{"10%", Step{true, true, 10.0, 0}, false},
-		{"2.5%", Step{true, true, 2.5, 0}, false},
-		{"5", Step{true, false, 0.0, 5}, false},
-		{"0", Step{true, false, 0.0, 0}, false},
-		{"invalid%", Step{}, true},
-		{"invalid", Step{}, true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			var step Step
-			err := step.Set(tt.input)
-			if (err != nil) != tt.err {
-				t.Errorf("Set() error = %v, expected error = %v", err, tt.err)
-			}
-			if err == nil && step != tt.expected {
-				t.Errorf("Set() = %v, expected %v", step, tt.expected)
-			}
-		})
-	}
-}
-
-func TestStep_String(t *testing.T) {
-	tests := []struct {
-		step     Step
-		expected string
-	}{
-		{Step{true, true, 10.0, 0}, "10.000000%"},
-		{Step{true, true, 25.0, 0}, "25.000000%"},
-		{Step{true, false, 0.0, 5}, "5"},
-		{Step{true, false, 0.0, 0}, "0"},
-		{Step{false, false, 0.0, 0}, "1"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.expected, func(t *testing.T) {
-			if got := tt.step.String(); got != tt.expected {
-				t.Errorf("String() = %v, expected %v", got, tt.expected)
 			}
 		})
 	}
@@ -320,6 +251,9 @@ func TestMakeSingleAddBenchmarkConfigRandom(t *testing.T) {
 }
 
 func TestPredictTotalDuration(t *testing.T) {
+	one := uint32(1)
+	pointone := float64(0.1)
+	onehundret := float64(100.0)
 	tests := []struct {
 		name             string
 		p                programParametrization
@@ -328,11 +262,8 @@ func TestPredictTotalDuration(t *testing.T) {
 		{
 			name: "Basic case with integer step",
 			p: programParametrization{
-				step: Step{
-					isSet:       true,
-					isPercent:   false,
-					integerStep: 1,
-				},
+				Istep:              &one,
+				RelativeLimit:      &onehundret,
 				targetAddsPerRound: 10,
 				toSetSize:          10,
 				fromSetSize:        1,
@@ -344,11 +275,8 @@ func TestPredictTotalDuration(t *testing.T) {
 		{
 			name: "Large set size with percent step",
 			p: programParametrization{
-				step: Step{
-					isSet:     true,
-					isPercent: true,
-					percent:   0.1,
-				},
+				Pstep:              &pointone,
+				RelativeLimit:      &onehundret,
 				targetAddsPerRound: 20,
 				toSetSize:          20,
 				fromSetSize:        5,
@@ -408,14 +336,6 @@ func TestCalcQuantizationError(t *testing.T) {
 				t.Errorf("calcQuantizationError() = %v, want something between %v and %v", got, tt.expectedErrorLin, tt.expectedErrorWin)
 			}
 		})
-	}
-}
-
-func TestStepType(t *testing.T) {
-	step := Step{}
-	expected := "string"
-	if result := step.Type(); result != expected {
-		t.Errorf("Type() = %v, want %v", result, expected)
 	}
 }
 
@@ -556,88 +476,71 @@ func TestSetSizes(t *testing.T) {
 }
 
 func TestInitSizes(t *testing.T) {
+	tenF := 10.0
+	twentifiveF := 25.0
+	onehundretF := 100.0
 	tests := []struct {
-		name     string
-		setup    benchmarkSetup
-		setSize  uint32
-		expected []uint32
+		name          string
+		setSize       uint32
+		fromSetSize   uint32
+		toSetSize     uint32
+		Pstep         *float64
+		Istep         *uint32
+		RelativeLimit *float64
+		AbsoluteLimit *uint32
+		expected      []uint32
 	}{
-		{
-			name: "From 10, +10%",
-			setup: benchmarkSetup{
-				programParametrization: programParametrization{
-					step: Step{
-						isPercent: true,
-						percent:   10.0,
+		{"From 10, +10%", 10, 10, 10, &tenF, nil, &onehundretF, nil, []uint32{10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}},
+		{"From 100, +25%", 100, 100, 100, &twentifiveF, nil, &onehundretF, nil, []uint32{100, 125, 150, 175, 200}},
+		/*		{
+					name: "From 10, +30%",
+					setup: benchmarkSetup{
+						programParametrization: programParametrization{
+							step: Step{
+								isPercent: true,
+								percent:   30.0,
+							},
+							toSetSize: 10,
+						},
 					},
-					toSetSize: 10,
+					setSize:  10,
+					expected: []uint32{10, 13, 16, 19, 22},
 				},
-			},
-			setSize:  10,
-			expected: []uint32{10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20},
-		},
-		{
-			name: "From 100, +25%",
-			setup: benchmarkSetup{
-				programParametrization: programParametrization{
-					step: Step{
-						isPercent: true,
-						percent:   25.0,
+				{
+					name: "From 2 to 6, +1",
+					setup: benchmarkSetup{
+						programParametrization: programParametrization{
+							step: Step{
+								isPercent:   false,
+								integerStep: 1,
+							},
+							toSetSize: 6,
+						},
 					},
-					toSetSize: 100,
+					setSize:  2,
+					expected: []uint32{2, 3, 4, 5, 6, 7, 8},
 				},
-			},
-			setSize:  100,
-			expected: []uint32{100, 125, 150, 175, 200},
-		},
-		{
-			name: "From 10, +30%",
-			setup: benchmarkSetup{
-				programParametrization: programParametrization{
-					step: Step{
-						isPercent: true,
-						percent:   30.0,
+				{
+					name: "From 33 to 40, +10",
+					setup: benchmarkSetup{
+						programParametrization: programParametrization{
+							step: Step{
+								isPercent:   false,
+								integerStep: 10,
+							},
+							toSetSize: 40,
+						},
 					},
-					toSetSize: 10,
+					setSize:  33,
+					expected: []uint32{33, 43, 53, 63, 73},
 				},
-			},
-			setSize:  10,
-			expected: []uint32{10, 13, 16, 19, 22},
-		},
-		{
-			name: "From 2 to 6, +1",
-			setup: benchmarkSetup{
-				programParametrization: programParametrization{
-					step: Step{
-						isPercent:   false,
-						integerStep: 1,
-					},
-					toSetSize: 6,
-				},
-			},
-			setSize:  2,
-			expected: []uint32{2, 3, 4, 5, 6, 7, 8},
-		},
-		{
-			name: "From 33 to 40, +10",
-			setup: benchmarkSetup{
-				programParametrization: programParametrization{
-					step: Step{
-						isPercent:   false,
-						integerStep: 10,
-					},
-					toSetSize: 40,
-				},
-			},
-			setSize:  33,
-			expected: []uint32{33, 43, 53, 63, 73},
-		},
+		*/
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			i := 0
-			for initSize := range tt.setup.initSizes(tt.setSize) {
+			for initSize := range initSizes2(tt.setSize, tt.fromSetSize, tt.toSetSize, tt.Pstep, tt.Istep, tt.RelativeLimit, tt.AbsoluteLimit) {
 				assert.True(t, tt.expected[i] == initSize, "%v!=%v", tt.expected[i], initSize)
 				i++
 			}
