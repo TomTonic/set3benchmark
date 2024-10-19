@@ -112,14 +112,14 @@ func benchmarkSetupFrom(p programParametrization) (benchmarkSetup, error) {
 	}
 	if p.Pstep == nil && p.Istep == nil {
 		one := uint32(1)
-		p.Istep = &one
+		result.Istep = &one
 	}
 	if p.RelativeLimit != nil && p.AbsoluteLimit != nil {
 		return result, errors.New("RelativeLimit and AbsoluteLimit are both defined")
 	}
 	if p.RelativeLimit == nil && p.AbsoluteLimit == nil {
 		onhundret := 100.0
-		p.RelativeLimit = &onhundret
+		result.RelativeLimit = &onhundret
 	}
 	if p.toSetSize < p.fromSetSize {
 		return result, errors.New("parameter error: 'to' < 'from'")
@@ -377,8 +377,12 @@ func main() {
 	pp.fromSetSize = cli.Add.Loadfactor.From
 	pp.toSetSize = cli.Add.Loadfactor.To
 	pp.targetAddsPerRound = cli.Add.Loadfactor.AddsPerRound
-	pp.secondsPerConfig = float64(cli.Add.Loadfactor.RuntimePerConfig.Nanoseconds() / 1_000_000_000_000.0)
-	pp.expRuntimePerAdd = float64(cli.Add.Loadfactor.RuntimePerAdd.Nanoseconds())
+	pp.secondsPerConfig = float64(cli.Add.Loadfactor.RuntimePerConfig) / 1_000_000_000.0
+	pp.expRuntimePerAdd = float64(cli.Add.Loadfactor.RuntimePerAdd)
+	pp.Pstep = cli.Add.Loadfactor.Pstep
+	pp.Istep = cli.Add.Loadfactor.Istep
+	pp.RelativeLimit = cli.Add.Loadfactor.RelativeLimit
+	pp.AbsoluteLimit = cli.Add.Loadfactor.AbsoluteLimit
 
 	setup, err := benchmarkSetupFrom(pp)
 
