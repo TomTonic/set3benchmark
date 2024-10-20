@@ -39,7 +39,7 @@ func addBenchmark(cfg singleAddBenchmarkConfig) (measurements []float64) {
 	setSize := cfg.finalSetSize
 	set := make([]*set3.Set3[uint64], numberOfSets)
 	for i := range numberOfSets {
-		set[i] = set3.EmptyWithCapacity[uint64](cfg.initSize)
+		set[i] = set3.EmptyWithCapacity[uint64](uint32(cfg.initSize))
 	}
 	timePerRound := make([]float64, cfg.rounds)
 	runtime.GC()
@@ -63,7 +63,7 @@ func addBenchmark(cfg singleAddBenchmarkConfig) (measurements []float64) {
 	return timePerRound
 }
 
-func toNanoSecondsPerAdd(measurements []float64, addsPerRound uint32) []float64 {
+func toNanoSecondsPerAdd(measurements []float64, addsPerRound uint64) []float64 {
 	result := make([]float64, len(measurements))
 	div := 1.0 / float64(addsPerRound)
 	for i, m := range measurements {
@@ -77,8 +77,8 @@ func printTotalRuntime(start time.Time) string {
 	return fmt.Sprintf("\nTotal runtime of benchmark: %v\n", end.Sub(start))
 }
 
-func getNumberOfConfigs(setSizeFrom, setSizeTo uint32, Pstep *float64, Istep *uint32, RelativeLimit *float64, AbsoluteLimit *uint32) uint32 {
-	result := uint32(0)
+func getNumberOfConfigs(setSizeFrom, setSizeTo uint64, Pstep *float64, Istep *uint64, RelativeLimit *float64, AbsoluteLimit *uint64) uint64 {
+	result := uint64(0)
 	for setSize := range setSizes(setSizeFrom, setSizeTo) {
 		for range initSizes2(setSize, Pstep, Istep, RelativeLimit, AbsoluteLimit) {
 			result++
@@ -88,30 +88,30 @@ func getNumberOfConfigs(setSizeFrom, setSizeTo uint32, Pstep *float64, Istep *ui
 }
 
 type programParametrization struct {
-	fromSetSize, toSetSize, targetAddsPerRound uint32
+	fromSetSize, toSetSize, targetAddsPerRound uint64
 	expRuntimePerAdd, secondsPerConfig         float64
 	Pstep                                      *float64
-	Istep                                      *uint32
+	Istep                                      *uint64
 	RelativeLimit                              *float64
-	AbsoluteLimit                              *uint32
+	AbsoluteLimit                              *uint64
 	//step                                       Step
 }
 
 type benchmarkSetup struct {
 	programParametrization
-	totalAddsPerConfig uint32
+	totalAddsPerConfig uint64
 }
 
 func benchmarkSetupFrom(p programParametrization) (benchmarkSetup, error) {
 	result := benchmarkSetup{
 		programParametrization: p,
-		totalAddsPerConfig:     uint32(p.secondsPerConfig * 1_000_000_000.0 / p.expRuntimePerAdd),
+		totalAddsPerConfig:     uint64(p.secondsPerConfig * 1_000_000_000.0 / p.expRuntimePerAdd),
 	}
 	if p.Pstep != nil && p.Istep != nil {
 		return result, errors.New("Pstep and Istep are both defined")
 	}
 	if p.Pstep == nil && p.Istep == nil {
-		one := uint32(1)
+		one := uint64(1)
 		result.Istep = &one
 	}
 	if p.RelativeLimit != nil && p.AbsoluteLimit != nil {
@@ -139,8 +139,8 @@ func benchmarkSetupFrom(p programParametrization) (benchmarkSetup, error) {
 	return result, nil
 }
 
-func setSizes(setSizeFrom, setSizeTo uint32) func(yield func(uint32) bool) {
-	return func(yield func(uint32) bool) {
+func setSizes(setSizeFrom, setSizeTo uint64) func(yield func(uint64) bool) {
+	return func(yield func(uint64) bool) {
 		for setSize := setSizeFrom; setSize <= setSizeTo; setSize++ {
 			if !yield(setSize) {
 				return
@@ -149,7 +149,7 @@ func setSizes(setSizeFrom, setSizeTo uint32) func(yield func(uint32) bool) {
 	}
 }
 
-func stepsHeadings(setSizeFrom, setSizeTo uint32, Pstep *float64, Istep *uint32, RelativeLimit *float64, AbsoluteLimit *uint32) ([]string, error) {
+func stepsHeadings(setSizeFrom, setSizeTo uint64, Pstep *float64, Istep *uint64, RelativeLimit *float64, AbsoluteLimit *uint64) ([]string, error) {
 	result := make([]string, 0, 100)
 	if Pstep == nil && Istep == nil {
 		return nil, errors.New("Pstep == nil && Istep == nil")
@@ -225,8 +225,8 @@ func stepsHeadings(setSizeFrom, setSizeTo uint32, Pstep *float64, Istep *uint32,
 
 			=> use setSizeTo for longest sequence
 		*/
-		start := uint32(0)
-		limit := uint32((math.Round(*RelativeLimit * float64(setSizeTo) / 100.0))) + (*Istep)
+		start := uint64(0)
+		limit := uint64((math.Round(*RelativeLimit * float64(setSizeTo) / 100.0))) + (*Istep)
 		for i := start; i < limit; i += (*Istep) {
 			result = append(result, fmt.Sprintf("+%d ", i))
 		}
@@ -242,7 +242,7 @@ func stepsHeadings(setSizeFrom, setSizeTo uint32, Pstep *float64, Istep *uint32,
 
 			=> use setSizeFrom for longest Sequence
 		*/
-		start := uint32(0)
+		start := uint64(0)
 		limit := (*AbsoluteLimit) - setSizeFrom + (*Istep)
 		for i := start; i < limit; i += (*Istep) {
 			result = append(result, fmt.Sprintf("+%d ", i))
@@ -251,13 +251,13 @@ func stepsHeadings(setSizeFrom, setSizeTo uint32, Pstep *float64, Istep *uint32,
 	return result, nil
 }
 
-func initSizes2(setSize uint32, Pstep *float64, Istep *uint32, RelativeLimit *float64, AbsoluteLimit *uint32) func(yield func(uint32) bool) {
+func initSizes2(setSize uint64, Pstep *float64, Istep *uint64, RelativeLimit *float64, AbsoluteLimit *uint64) func(yield func(uint64) bool) {
 	if Pstep != nil && RelativeLimit != nil {
 		start := float64(0)
 		limit := (*RelativeLimit) + (*Pstep)
-		return func(yield func(uint32) bool) {
+		return func(yield func(uint64) bool) {
 			for f := start; f < limit; f += (*Pstep) {
-				retval := setSize + uint32(math.Round(float64(setSize)*f/100.0))
+				retval := setSize + uint64(math.Round(float64(setSize)*f/100.0))
 				if !yield(retval) {
 					return
 				}
@@ -268,9 +268,9 @@ func initSizes2(setSize uint32, Pstep *float64, Istep *uint32, RelativeLimit *fl
 		start := float64(0)
 		factor := float64(*AbsoluteLimit) / float64(setSize)
 		limit := (factor-1.0)*100.0 + *Pstep
-		return func(yield func(uint32) bool) {
+		return func(yield func(uint64) bool) {
 			for f := start; f < limit; f += (*Pstep) {
-				retval := setSize + uint32(math.Round(float64(setSize)*f/100.0))
+				retval := setSize + uint64(math.Round(float64(setSize)*f/100.0))
 				if !yield(retval) {
 					return
 				}
@@ -278,9 +278,9 @@ func initSizes2(setSize uint32, Pstep *float64, Istep *uint32, RelativeLimit *fl
 		}
 	}
 	if Istep != nil && RelativeLimit != nil {
-		start := uint32(0)
-		limit := uint32((math.Round(*RelativeLimit * float64(setSize) / 100.0))) + (*Istep)
-		return func(yield func(uint32) bool) {
+		start := uint64(0)
+		limit := uint64((math.Round(*RelativeLimit * float64(setSize) / 100.0))) + (*Istep)
+		return func(yield func(uint64) bool) {
 			for i := start; i < limit; i += (*Istep) {
 				retval := setSize + i
 				if !yield(retval) {
@@ -290,9 +290,9 @@ func initSizes2(setSize uint32, Pstep *float64, Istep *uint32, RelativeLimit *fl
 		}
 	}
 	if Istep != nil && AbsoluteLimit != nil {
-		start := uint32(0)
+		start := uint64(0)
 		limit := (*AbsoluteLimit) - setSize + (*Istep)
-		return func(yield func(uint32) bool) {
+		return func(yield func(uint64) bool) {
 			for i := start; i < limit; i += (*Istep) {
 				retval := setSize + i
 				if !yield(retval) {
@@ -306,17 +306,17 @@ func initSizes2(setSize uint32, Pstep *float64, Istep *uint32, RelativeLimit *fl
 }
 
 type singleAddBenchmarkConfig struct {
-	initSize           uint32
-	finalSetSize       uint32
-	targetAddsPerRound uint32
-	totalAddsPerConfig uint32
-	numOfSets          uint32
-	actualAddsPerRound uint32
-	rounds             uint32
+	initSize           uint64
+	finalSetSize       uint64
+	targetAddsPerRound uint64
+	totalAddsPerConfig uint64
+	numOfSets          uint64
+	actualAddsPerRound uint64
+	rounds             uint64
 	seed               uint64
 }
 
-func makeSingleAddBenchmarkConfig(initSize, setSize, targetAddsPerRound, totalAddsPerConfig uint32, seed uint64) singleAddBenchmarkConfig {
+func makeSingleAddBenchmarkConfig(initSize, setSize, targetAddsPerRound, totalAddsPerConfig uint64, seed uint64) singleAddBenchmarkConfig {
 	if setSize > targetAddsPerRound {
 		targetAddsPerRound = setSize
 	}
@@ -330,24 +330,24 @@ func makeSingleAddBenchmarkConfig(initSize, setSize, targetAddsPerRound, totalAd
 		totalAddsPerConfig: totalAddsPerConfig,
 		seed:               seed,
 	}
-	result.numOfSets = uint32(math.Round(float64(targetAddsPerRound) / float64(setSize)))
+	result.numOfSets = uint64(math.Round(float64(targetAddsPerRound) / float64(setSize)))
 	result.actualAddsPerRound = result.numOfSets * setSize // actualAddsPerRound ~ targetAddsPerRound
-	result.rounds = uint32(math.Round(float64(totalAddsPerConfig) / float64(result.actualAddsPerRound)))
+	result.rounds = uint64(math.Round(float64(totalAddsPerConfig) / float64(result.actualAddsPerRound)))
 	return result
 }
 
 var cli struct {
 	Add struct {
 		Loadfactor struct {
-			From             uint32        `arg:"" help:"First set size to benchmark (inclusive)." short:"f"`
-			To               uint32        `arg:"" help:"Last set size to benchmark (inclusive)." short:"t"`
-			AddsPerRound     uint32        `help:"Number of Add(prng.Uint64()) instructions between two time measurements. Balance the value between memory consumption (cache size/speed) and timer precision of your runtime environment (e.g., Windows=100ns)." short:"r" default:"50000"`
+			From             uint64        `arg:"" help:"First set size to benchmark (inclusive)." short:"f"`
+			To               uint64        `arg:"" help:"Last set size to benchmark (inclusive)." short:"t"`
+			AddsPerRound     uint64        `help:"Number of Add(prng.Uint64()) instructions between two time measurements. Balance the value between memory consumption (cache size/speed) and timer precision of your runtime environment (e.g., Windows=100ns)." short:"r" default:"50000"`
 			RuntimePerConfig time.Duration `help:"Benchmarking time per configuration (combination of initial set size and number of values to add)." short:"c" default:"1.5s"`
 			RuntimePerAdd    time.Duration `help:"Expected runtime per single Add(prng.Uint64()) instruction. Used to calculate the necessary number of iterations to meet the runtime-per-config and to predcict the total runtime of the benchmark." short:"a" default:"8ns"`
 			Pstep            *float64      `help:"Uses percentage value to increase the initial set size in benchmark configurations until the limit is reached (see relative-limit or absolute-limit). You can either specify a pstep or an istep. Default is an istep of size 1." short:"p" xor:"Pstep, Istep"`
-			Istep            *uint32       `help:"Uses integer value to increase the initial set size in benchmark configurations until the limit is reached (see relative-limit or absolute-limit). You can either specify a pstep or an istep. Default is an istep of size 1." short:"i" xor:"Pstep, Istep"`
+			Istep            *uint64       `help:"Uses integer value to increase the initial set size in benchmark configurations until the limit is reached (see relative-limit or absolute-limit). You can either specify a pstep or an istep. Default is an istep of size 1." short:"i" xor:"Pstep, Istep"`
 			RelativeLimit    *float64      `help:"Increase initial (pre-allocated) set sizes until at least x% headroom are reached. You can either specify a relative-limit or an absolute-limit. Default is a relative-limit of 100%." xor:"RelativeLimit, AbsoluteLimit"`
-			AbsoluteLimit    *uint32       `help:"Increase initial (pre-allocated) set sizes until at least an initial set size of x is reached. You can either specify a relative-limit or an absolute-limit. Default is a relative-limit of 100%." xor:"RelativeLimit, AbsoluteLimit"`
+			AbsoluteLimit    *uint64       `help:"Increase initial (pre-allocated) set sizes until at least an initial set size of x is reached. You can either specify a relative-limit or an absolute-limit. Default is a relative-limit of 100%." xor:"RelativeLimit, AbsoluteLimit"`
 		} `cmd:"" help:"Perform a loadfactor test using different initial (pre-allocated) set sizes. This benchmark creates empty sets of a defined size x and then adds y random numers via Add(prng.Uint64()). Any combination of x and y is called 'configration'."`
 	} `cmd:"" help:"Benchmark adding random uint64 to an empty set."`
 }
@@ -440,7 +440,7 @@ func calcQuantizationError(p benchmarkSetup) float64 {
 
 func predictTotalDuration(p benchmarkSetup) time.Duration {
 	numberOfStepsPerSetSize := getNumberOfConfigs(p.fromSetSize, p.toSetSize, p.Pstep, p.Istep, p.RelativeLimit, p.AbsoluteLimit)
-	totalduration := time.Duration(uint32(p.expRuntimePerAdd * float64(p.totalAddsPerConfig)))
+	totalduration := time.Duration(uint64(p.expRuntimePerAdd * float64(p.totalAddsPerConfig)))
 	totalduration *= time.Duration(numberOfStepsPerSetSize)
 	totalduration = time.Duration(float64(totalduration) * 1.12)
 	return totalduration

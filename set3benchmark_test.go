@@ -14,16 +14,16 @@ import (
 
 func TestDoBenchmark2(t *testing.T) {
 	cfg := singleAddBenchmarkConfig{
-		rounds:       uint32(72),
-		numOfSets:    uint32(10),
-		initSize:     uint32(150),
-		finalSetSize: uint32(100),
+		rounds:       uint64(72),
+		numOfSets:    uint64(10),
+		initSize:     uint64(150),
+		finalSetSize: uint64(100),
 		seed:         0xabcdef,
 	}
 
 	result := addBenchmark(cfg)
 
-	assert.True(t, uint32(len(result)) == cfg.rounds, "Result should return %d measurements. It returned %d measurements.", cfg.rounds, len(result))
+	assert.True(t, uint64(len(result)) == cfg.rounds, "Result should return %d measurements. It returned %d measurements.", cfg.rounds, len(result))
 	assert.False(t, containsZero(result), "Result should not contain zeros, but it does.")
 	assert.False(t, containsNegative(result), "Result should not contain negative numbers, but it does.")
 
@@ -76,19 +76,19 @@ func TestGetNumberOfConfigs(t *testing.T) {
 	//thirtyF := 30.0
 	onehundretF := 100.0
 	//onepointfiveF := 1.5
-	//oneI := uint32(1)
-	twoI := uint32(2)
-	twentyI := uint32(20)
-	//tenI := uint32(10)
-	onehundretI := uint32(100)
+	//oneI := uint64(1)
+	twoI := uint64(2)
+	twentyI := uint64(20)
+	//tenI := uint64(10)
+	onehundretI := uint64(100)
 	tests := []struct {
-		setSizeFrom   uint32
-		setSizeTo     uint32
+		setSizeFrom   uint64
+		setSizeTo     uint64
 		Pstep         *float64
-		Istep         *uint32
+		Istep         *uint64
 		RelativeLimit *float64
-		AbsoluteLimit *uint32
-		expected      uint32
+		AbsoluteLimit *uint64
+		expected      uint64
 	}{
 		{7, 9, &oneF, nil, &onehundretF, nil, 101 * 3},        // expect: 0%, 1%, 2%, ..., 99%, 100% for rows 7, 8 and 9
 		{33, 33, &tenF, nil, &onehundretF, nil, 11},           // expect: 0%, 10%, 20%, ..., 90%, 100% for 1 row
@@ -156,17 +156,17 @@ func TestStepsHeadings(t *testing.T) {
 	twentyfiveF := 25.0
 	thirtyF := 30.0
 	onehundretF := 100.0
-	tenI := uint32(10)
-	twentyfiveI := uint32(25)
-	thirtyI := uint32(30)
-	onehundretI := uint32(100)
+	tenI := uint64(10)
+	twentyfiveI := uint64(25)
+	thirtyI := uint64(30)
+	onehundretI := uint64(100)
 	tests := []struct {
-		setSizeFrom   uint32
-		setSizeTo     uint32
+		setSizeFrom   uint64
+		setSizeTo     uint64
 		Pstep         *float64
-		Istep         *uint32
+		Istep         *uint64
 		RelativeLimit *float64
-		AbsoluteLimit *uint32
+		AbsoluteLimit *uint64
 		err           bool
 		expected      []string
 	}{
@@ -211,7 +211,7 @@ func TestStepsHeadings(t *testing.T) {
 func TestToNSperAdd(t *testing.T) {
 	tests := []struct {
 		measurements []float64
-		addsPerRound uint32
+		addsPerRound uint64
 		expected     []float64
 	}{
 		{[]float64{10, 20}, 2, []float64{5, 10}},
@@ -238,13 +238,13 @@ func TestToNSperAdd(t *testing.T) {
 
 func TestMakeSingleAddBenchmarkConfig(t *testing.T) {
 	tests := []struct {
-		initSize             uint32
-		setSize              uint32
-		targetAddsPerRound   uint32
-		totalAddsPerConfig   uint32
-		expectedNumOfSets    uint32
-		expectedAddsPerRound uint32
-		expectedRounds       uint32
+		initSize             uint64
+		setSize              uint64
+		targetAddsPerRound   uint64
+		totalAddsPerConfig   uint64
+		expectedNumOfSets    uint64
+		expectedAddsPerRound uint64
+		expectedRounds       uint64
 	}{
 		{20, 20, 2_000, 20_000, 100, 2_000, 10},
 		{20, 20, 1_999, 20_000, 100, 2_000, 10},
@@ -288,10 +288,10 @@ func TestMakeSingleAddBenchmarkConfig(t *testing.T) {
 
 func TestMakeSingleAddBenchmarkConfigRandom(t *testing.T) {
 	for range 5_000 {
-		initSize := rand.Uint32()%(1<<20) + 1
-		setSize := rand.Uint32()%(1<<20) + 1
-		targetAddsPerRound := rand.Uint32()%(1<<20) + 1
-		totalAddsPerConfig := rand.Uint32()%(1<<20) + 1
+		initSize := rand.Uint64()%(1<<20) + 1
+		setSize := rand.Uint64()%(1<<20) + 1
+		targetAddsPerRound := rand.Uint64()%(1<<20) + 1
+		totalAddsPerConfig := rand.Uint64()%(1<<20) + 1
 		t.Run("", func(t *testing.T) {
 			config := makeSingleAddBenchmarkConfig(initSize, setSize, targetAddsPerRound, totalAddsPerConfig, 0)
 			assert.True(t, config.finalSetSize <= config.targetAddsPerRound, "config.finalSetSize(%d) > config.targetAddsPerRound(%d)", config.finalSetSize, config.targetAddsPerRound)
@@ -306,7 +306,7 @@ func TestMakeSingleAddBenchmarkConfigRandom(t *testing.T) {
 }
 
 func TestPredictTotalDuration(t *testing.T) {
-	one := uint32(1)
+	one := uint64(1)
 	pointone := float64(0.1)
 	onehundret := float64(100.0)
 	tests := []struct {
@@ -494,21 +494,21 @@ func TestBenchmarkSetupFrom(t *testing.T) {
 func TestSetSizes(t *testing.T) {
 	tests := []struct {
 		name        string
-		fromSetSize uint32
-		toSetSize   uint32
-		expected    []uint32
+		fromSetSize uint64
+		toSetSize   uint64
+		expected    []uint64
 	}{
 		{
 			name:        "Normal range",
 			fromSetSize: 1,
 			toSetSize:   5,
-			expected:    []uint32{1, 2, 3, 4, 5},
+			expected:    []uint64{1, 2, 3, 4, 5},
 		},
 		{
 			name:        "Single value range",
 			fromSetSize: 3,
 			toSetSize:   3,
-			expected:    []uint32{3},
+			expected:    []uint64{3},
 		},
 	}
 
@@ -527,28 +527,28 @@ func TestInitSizes(t *testing.T) {
 	tenF := 10.0
 	twentifiveF := 25.0
 	onehundretF := 100.0
-	twoI := uint32(2)
-	twentyI := uint32(20)
-	onehundretI := uint32(100)
+	twoI := uint64(2)
+	twentyI := uint64(20)
+	onehundretI := uint64(100)
 	tests := []struct {
 		name          string
-		setSize       uint32
+		setSize       uint64
 		Pstep         *float64
-		Istep         *uint32
+		Istep         *uint64
 		RelativeLimit *float64
-		AbsoluteLimit *uint32
-		expected      []uint32
+		AbsoluteLimit *uint64
+		expected      []uint64
 	}{
-		{"SetSize 10, +10%, up to +100%", 10, &tenF, nil, &onehundretF, nil, []uint32{10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}},
-		{"SetSize 100, +25%, up to +100%", 100, &twentifiveF, nil, &onehundretF, nil, []uint32{100, 125, 150, 175, 200}},
-		{"SetSize 53, +10%, up to 100", 53, &tenF, nil, nil, &onehundretI, []uint32{53, 58, 64, 69, 74, 80, 85, 90, 95, 101}},
-		{"SetSize 7, +2, up to +100%", 7, nil, &twoI, &onehundretF, nil, []uint32{7, 9, 11, 13, 15}},
-		{"SetSize 6, +2, up to 20", 6, nil, &twoI, nil, &twentyI, []uint32{6, 8, 10, 12, 14, 16, 18, 20}},
+		{"SetSize 10, +10%, up to +100%", 10, &tenF, nil, &onehundretF, nil, []uint64{10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20}},
+		{"SetSize 100, +25%, up to +100%", 100, &twentifiveF, nil, &onehundretF, nil, []uint64{100, 125, 150, 175, 200}},
+		{"SetSize 53, +10%, up to 100", 53, &tenF, nil, nil, &onehundretI, []uint64{53, 58, 64, 69, 74, 80, 85, 90, 95, 101}},
+		{"SetSize 7, +2, up to +100%", 7, nil, &twoI, &onehundretF, nil, []uint64{7, 9, 11, 13, 15}},
+		{"SetSize 6, +2, up to 20", 6, nil, &twoI, nil, &twentyI, []uint64{6, 8, 10, 12, 14, 16, 18, 20}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := make([]uint32, 0, len(tt.expected))
+			result := make([]uint64, 0, len(tt.expected))
 			for initSize := range initSizes2(tt.setSize, tt.Pstep, tt.Istep, tt.RelativeLimit, tt.AbsoluteLimit) {
 				result = append(result, initSize)
 			}
