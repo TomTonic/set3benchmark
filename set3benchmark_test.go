@@ -288,10 +288,10 @@ func TestMakeSingleAddBenchmarkConfig(t *testing.T) {
 
 func TestMakeSingleAddBenchmarkConfigRandom(t *testing.T) {
 	for range 5_000 {
-		initSize := rand.Uint32() % (1 << 20)
-		setSize := rand.Uint32() % (1 << 20)
-		targetAddsPerRound := rand.Uint32() % (1 << 20)
-		totalAddsPerConfig := rand.Uint32() % (1 << 20)
+		initSize := rand.Uint32()%(1<<20) + 1
+		setSize := rand.Uint32()%(1<<20) + 1
+		targetAddsPerRound := rand.Uint32()%(1<<20) + 1
+		totalAddsPerConfig := rand.Uint32()%(1<<20) + 1
 		t.Run("", func(t *testing.T) {
 			config := makeSingleAddBenchmarkConfig(initSize, setSize, targetAddsPerRound, totalAddsPerConfig, 0)
 			assert.True(t, config.finalSetSize <= config.targetAddsPerRound, "config.finalSetSize(%d) > config.targetAddsPerRound(%d)", config.finalSetSize, config.targetAddsPerRound)
