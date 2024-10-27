@@ -95,3 +95,11 @@ func CalcNumberOfSamplesForConfidence(data []float64) int32 {
 	return int32(anzahlMessungen)
 }
 */
+
+func AssertPositive(ary []float64, pos string) {
+	for f := range ary {
+		if f < 0.0 {
+			panic(pos)
+		}
+	}
+}
