@@ -12,7 +12,6 @@ import (
 
 	set3 "github.com/TomTonic/Set3"
 	misc "github.com/TomTonic/set3benchmark/misc"
-	//	"github.com/loov/hrtime"
 )
 
 var rngOverhead = getPRNGOverhead()
@@ -42,10 +41,11 @@ func addBenchmark(cfg singleAddBenchmarkConfig) (measurements []float64) {
 		set[i] = set3.EmptyWithCapacity[uint64](uint32(cfg.initSize))
 	}
 	timePerRound := make([]float64, cfg.rounds)
-	runtime.GC()
 	debug.SetGCPercent(-1)
-	defer debug.SetGCPercent(100)
+	runtime.GC()
 	for r := range cfg.rounds {
+		prng.State = cfg.seed
+		prng.Round = 0
 		for s := range numberOfSets {
 			set[s].Clear()
 		}
@@ -58,18 +58,19 @@ func addBenchmark(cfg singleAddBenchmarkConfig) (measurements []float64) {
 		}
 		endTime := misc.SampleTime()
 		diff := float64(misc.DiffTimeStamps(startTime, endTime))
-		timePerRound[r] = diff - misc.GetSampleTimeRuntime() - (rngOverhead * float64(numberOfSets*setSize))
+		// timePerRound[r] = diff - misc.GetSampleTimeRuntime() - (rngOverhead * float64(numberOfSets*setSize))
+		timePerRound[r] = diff
 	}
+	debug.SetGCPercent(100)
 	return timePerRound
 }
 
-func toNanoSecondsPerAdd(measurements []float64, addsPerRound uint64) []float64 {
-	result := make([]float64, len(measurements))
-	div := 1.0 / float64(addsPerRound)
-	for i, m := range measurements {
-		result[i] = float64(m) * div
+func toNanoSecondsPerAdd(timePerRound []float64, addsPerRound uint64) []float64 {
+	nsPerAdd := make([]float64, len(timePerRound))
+	for i, tpr := range timePerRound {
+		nsPerAdd[i] = float64(tpr) / float64(addsPerRound)
 	}
-	return result
+	return nsPerAdd
 }
 
 func printTotalRuntime(start time.Time) string {
@@ -393,7 +394,6 @@ func main() {
 	printSetup(setup)
 
 	start := time.Now()
-	defer fmt.Print(printTotalRuntime(start))
 
 	fmt.Printf("setSize ")
 	headings, _ := stepsHeadings(setup.fromSetSize, setup.toSetSize, setup.Pstep, setup.Istep, setup.RelativeLimit, setup.AbsoluteLimit)
@@ -401,18 +401,31 @@ func main() {
 		fmt.Print(columnH)
 	}
 	fmt.Print("\n")
+	ho := misc.HistogramOptions{
+		BinCount:        60,
+		NiceRange:       false,
+		ClampMaximum:    0,
+		ClampPercentile: 0.95,
+	}
 	for setSize := range setSizes(setup.fromSetSize, setup.toSetSize) {
-		fmt.Printf("%d ", setSize)
+		//fmt.Printf("%d ", setSize)
 		for initSize := range initSizes2(setSize, setup.Pstep, setup.Istep, setup.RelativeLimit, setup.AbsoluteLimit) {
+			fmt.Printf("%d/%d:\n", setSize, initSize)
 			cfg := makeSingleAddBenchmarkConfig(initSize, setSize, setup.targetAddsPerRound, setup.totalAddsPerConfig, 0xABCDEF0123456789)
-			measurements := addBenchmark(cfg)
-			nsValues := toNanoSecondsPerAdd(measurements, cfg.actualAddsPerRound)
-			median := misc.Median(nsValues)
-			fmt.Printf("%.3f ", median)
+			timePerRound := addBenchmark(cfg)
+			misc.AssertPositive(timePerRound, "A")
+			nsPerAdd := toNanoSecondsPerAdd(timePerRound, cfg.actualAddsPerRound)
+			misc.AssertPositive(nsPerAdd, "B")
+			h := misc.NewHistogram(nsPerAdd, &ho)
+			h.Width = 120
+			fmt.Printf("%v\n", h.String())
+			//median := misc.Median(nsValues)
+			//fmt.Printf("%.3f ", median)
 			// fmt.Printf("%d ", initSize)
 		}
-		fmt.Printf("\n")
+		//fmt.Printf("\n")
 	}
+	fmt.Print(printTotalRuntime(start))
 }
 
 func printSetup(p benchmarkSetup) {
@@ -429,6 +442,7 @@ func printSetup(p benchmarkSetup) {
 	fmt.Printf("Set3 sizes:\t\t\tfrom %d to %d\n", p.fromSetSize, p.toSetSize)
 	numberOfConfigs := getNumberOfConfigs(p.fromSetSize, p.toSetSize, p.Pstep, p.Istep, p.RelativeLimit, p.AbsoluteLimit)
 	fmt.Printf("Number of configs:\t\t%d\n", numberOfConfigs)
+	fmt.Printf("Rounds per config:\t\t%d\n", p.totalAddsPerConfig/p.targetAddsPerRound)
 	totalduration := predictTotalDuration(p)
 	fmt.Printf("Expected total runtime:\t\t%v (assumption: %.2fns per Add(prng.Uint64()) and 12%% overhead for housekeeping)\n\n", totalduration, p.expRuntimePerAdd)
 }

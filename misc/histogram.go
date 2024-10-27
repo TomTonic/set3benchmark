@@ -30,7 +30,7 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 )
@@ -45,7 +45,7 @@ type HistogramOptions struct {
 	ClampPercentile float64
 }
 
-var defaultOptions = HistogramOptions{
+var DefaultOptions = HistogramOptions{
 	BinCount:        10,
 	NiceRange:       true,
 	ClampMaximum:    0,
@@ -58,7 +58,7 @@ type Histogram struct {
 	Average float64
 	Maximum float64
 
-	P50, P90, P99, P999, P9999 float64
+	P25, P50, P75, P90, P99, P999, P9999 float64
 
 	Bins []HistogramBin
 
@@ -96,8 +96,9 @@ func NewHistogram(nanoseconds []float64, opts *HistogramOptions) *Histogram {
 		return hist
 	}
 
-	nanoseconds = append(nanoseconds[:0:0], nanoseconds...)
-	sort.Float64s(nanoseconds)
+	//nanoseconds = append(nanoseconds[:0:0], nanoseconds...)
+	slices.Sort(nanoseconds)
+	AssertPositive(nanoseconds, "C")
 
 	hist.Minimum = nanoseconds[0]
 	hist.Maximum = nanoseconds[len(nanoseconds)-1]
@@ -119,7 +120,7 @@ func NewHistogram(nanoseconds []float64, opts *HistogramOptions) *Histogram {
 		return nanoseconds[i]
 	}
 
-	hist.P50, hist.P90, hist.P99, hist.P999, hist.P9999 = p(0.50), p(0.90), p(0.99), p(0.999), p(0.9999)
+	hist.P25, hist.P50, hist.P75, hist.P90, hist.P99, hist.P999, hist.P9999 = p(0.25), p(0.50), p(0.75), p(0.90), p(0.99), p(0.999), p(0.9999)
 
 	clampMaximum := hist.Maximum
 	if opts.ClampPercentile > 0 {
@@ -175,7 +176,9 @@ func (hist *Histogram) Divide(n int) {
 	hist.Average /= float64(n)
 	hist.Maximum /= float64(n)
 
+	hist.P25 /= float64(n)
 	hist.P50 /= float64(n)
+	hist.P75 /= float64(n)
 	hist.P90 /= float64(n)
 	hist.P99 /= float64(n)
 	hist.P999 /= float64(n)
@@ -188,16 +191,18 @@ func (hist *Histogram) Divide(n int) {
 
 // WriteStatsTo writes formatted statistics to w.
 func (hist *Histogram) WriteStatsTo(w io.Writer) (int64, error) {
-	n, err := fmt.Fprintf(w, "  avg %v;  min %v;  p50 %v;  max %v;\n  p90 %v;  p99 %v;  p999 %v;  p9999 %v;\n",
-		time.Duration(truncate(hist.Average, 3)),
-		time.Duration(truncate(hist.Minimum, 3)),
-		time.Duration(truncate(hist.P50, 3)),
-		time.Duration(truncate(hist.Maximum, 3)),
+	n, err := fmt.Fprintf(w, "  min %8.3fns;  p25 %8.3fns;  p50 %8.3fns;  p75  %8.3fns;  max   %8.3fns;\n  avg %8.3fns;  p90 %8.3fns;  p99 %8.3fns;  p999 %8.3fns;  p9999 %8.3fns;\n",
+		hist.Minimum,
+		hist.P25,
+		hist.P50,
+		hist.P75,
+		hist.Maximum,
 
-		time.Duration(truncate(hist.P90, 3)),
-		time.Duration(truncate(hist.P99, 3)),
-		time.Duration(truncate(hist.P999, 3)),
-		time.Duration(truncate(hist.P9999, 3)),
+		hist.Average,
+		hist.P90,
+		hist.P99,
+		hist.P999,
+		hist.P9999,
 	)
 	return int64(n), err
 }
@@ -221,11 +226,10 @@ func (hist *Histogram) WriteTo(w io.Writer) (int64, error) {
 	var n int
 	for _, bin := range hist.Bins {
 		if bin.andAbove {
-			n, err = fmt.Fprintf(w, " %10v+[%[2]*[3]v] ", time.Duration(round(bin.Start, 3)), maxCountLength, bin.Count)
+			n, err = fmt.Fprintf(w, " %8.3fns+[%[2]*[3]v] ", bin.Start, maxCountLength, bin.Count)
 		} else {
-			n, err = fmt.Fprintf(w, " %10v [%[2]*[3]v] ", time.Duration(round(bin.Start, 3)), maxCountLength, bin.Count)
+			n, err = fmt.Fprintf(w, " %8.3fns [%[2]*[3]v] ", bin.Start, maxCountLength, bin.Count)
 		}
-
 		written += int64(n)
 		if err != nil {
 			return written, err
