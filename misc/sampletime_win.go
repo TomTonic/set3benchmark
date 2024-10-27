@@ -34,10 +34,10 @@ func SampleTime() TimeStamp {
 	return qpc
 }
 
-// Retruns the difference between two timestams in nanoseconds with the highest possible precision (which might be more than just a nanosecond).
+// Retruns the difference between two timestams in nanoseconds with the highest possible precision (which might be more than just one nanosecond).
 func DiffTimeStamps(t_earlier, t_later TimeStamp) int64 {
-	result := int64(1_000_000_000) // ns per sec
-	result *= t_later - t_earlier
+	result := t_later - t_earlier
+	result *= int64(1_000_000_000) // ns per sec
 	result /= qpcFrequency
 	return result
 }
