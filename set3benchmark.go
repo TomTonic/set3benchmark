@@ -14,22 +14,35 @@ import (
 	misc "github.com/TomTonic/set3benchmark/misc"
 )
 
-var rngOverhead = getPRNGOverhead()
+var prngOverhead = -1.0
+var prngOverheadActualQuantizationError = -1.0
 
-func getPRNGOverhead() float64 {
-	calibrationCalls := 2_000_000_000 // prng.Uint64() is about 1-2ns, timer resolution is 100ns (windows)
-	prng := misc.PRNG{State: 0x1234567890abcde}
-	debug.SetGCPercent(-1)
-	start := misc.SampleTime()
-	for i := 0; i < calibrationCalls; i++ {
-		prng.Uint64()
+func getPRNGOverhead() (prngOverheadInNS, quantizationError float64) {
+	if prngOverhead != -1.0 {
+		return prngOverhead, prngOverheadActualQuantizationError
 	}
-	stop := misc.SampleTime()
+	roughlyExpectedRuntimeForOneCallInNS := 1.2
+	desiredErrorMargin := 1.0 / (1 << 18)
+	timerPrecisionInNS := misc.GetSampleTimePrecision()
+	calibrationCalls := int64(timerPrecisionInNS / (roughlyExpectedRuntimeForOneCallInNS * desiredErrorMargin))
+	prng := misc.PRNG{State: 0x1234567890abcde}
+	rounds := 201
+	times := make([]float64, rounds)
+	debug.SetGCPercent(-1)
+	for r := range rounds {
+		start := misc.SampleTime()
+		for i := int64(0); i < calibrationCalls; i++ {
+			prng.Uint64()
+		}
+		stop := misc.SampleTime()
+		times[r] = float64(misc.DiffTimeStamps(start, stop))
+	}
 	debug.SetGCPercent(100)
-	totalTimeForRandomNumbers := float64(misc.DiffTimeStamps(start, stop))
 	sampleTimeOverhead := misc.GetSampleTimeRuntime()
-	result := (totalTimeForRandomNumbers - sampleTimeOverhead) / float64(calibrationCalls)
-	return result
+	medTimeForOneRound := misc.Median(times) - sampleTimeOverhead
+	prngOverhead = medTimeForOneRound / float64(calibrationCalls)
+	prngOverheadActualQuantizationError = timerPrecisionInNS / (float64(calibrationCalls) * medTimeForOneRound)
+	return prngOverhead, prngOverheadActualQuantizationError
 }
 
 func addBenchmark(cfg singleAddBenchmarkConfig) (measurements []float64) {
@@ -431,9 +444,10 @@ func main() {
 func printSetup(p benchmarkSetup) {
 	fmt.Printf("Architecture:\t\t\t%s\n", runtime.GOARCH)
 	fmt.Printf("OS:\t\t\t\t%s\n", runtime.GOOS)
+	fmt.Printf("SampleTime() runtime:\t\t%.2fns\n", misc.GetSampleTimeRuntime())
 	fmt.Printf("Max timer precision:\t\t%.2fns\n", misc.GetSampleTimePrecision())
-	fmt.Printf("SampleTime() runtime:\t\t%.2fns (informative, already subtracted from below measurement values)\n", misc.GetSampleTimeRuntime())
-	fmt.Printf("prng.Uint64() runtime:\t\t%.2fns (informative, already subtracted from below measurement values)\n", rngOverhead)
+	overhead, qerror := getPRNGOverhead()
+	fmt.Printf("prng.Uint64() runtime:\t\t%.3fns (quantization error: %e)\n", overhead, qerror)
 	fmt.Printf("Exp. Add(prng.Uint64()) rt:\t%.2fns\n", p.expRuntimePerAdd)
 	quantizationError := calcQuantizationError(p)
 	fmt.Printf("Add()'s per round:\t\t%d (expect a quantization error of %.3f%%, i.e. %.3fns per Add)\n", p.targetAddsPerRound, quantizationError, quantizationError*p.expRuntimePerAdd)

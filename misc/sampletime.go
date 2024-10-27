@@ -11,19 +11,36 @@ type TimeStamp = int64
 const iterationsForCallibration = 10_000_000
 
 var (
-	minTimeSample = calcMinTimeSample()
-	medCallTime   = calcMedCallTime()
-	precision     = calcPrecision(minTimeSample, medCallTime)
+	mts       = int64(-1)
+	mct       = -1.0
+	precision = -1.0
 )
+
+func minTimeSample() int64 {
+	if mts == -1 {
+		mts = calcMinTimeSample()
+	}
+	return mts
+}
+
+func medCallTime() float64 {
+	if mct == -1.0 {
+		mct = calcMedCallTime()
+	}
+	return mct
+}
 
 // Returns the precision of time measurements obtained via SampleTime() on the runtime system in nanoseconds.
 func GetSampleTimePrecision() float64 {
+	if precision == -1.0 {
+		precision = calcPrecision(minTimeSample(), medCallTime())
+	}
 	return precision
 }
 
 // Returns the median runtime of of one call of SampleTime() on the runtime system in nanoseconds.
 func GetSampleTimeRuntime() float64 {
-	return medCallTime
+	return medCallTime()
 }
 
 func calcPrecision(minTimeSample int64, avgCallTime float64) float64 {
