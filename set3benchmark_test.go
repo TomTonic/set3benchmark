@@ -527,6 +527,7 @@ func TestInitSizes(t *testing.T) {
 	tenF := 10.0
 	twentifiveF := 25.0
 	onehundretF := 100.0
+	oneI := uint64(1)
 	twoI := uint64(2)
 	twentyI := uint64(20)
 	onehundretI := uint64(100)
@@ -544,6 +545,7 @@ func TestInitSizes(t *testing.T) {
 		{"SetSize 53, +10%, up to 100", 53, &tenF, nil, nil, &onehundretI, []uint64{53, 58, 64, 69, 74, 80, 85, 90, 95, 101}},
 		{"SetSize 7, +2, up to +100%", 7, nil, &twoI, &onehundretF, nil, []uint64{7, 9, 11, 13, 15}},
 		{"SetSize 6, +2, up to 20", 6, nil, &twoI, nil, &twentyI, []uint64{6, 8, 10, 12, 14, 16, 18, 20}},
+		{"SetSize 20, +1, up to 20", 20, nil, &oneI, nil, &twentyI, []uint64{20}},
 	}
 
 	for _, tt := range tests {
