@@ -31,7 +31,7 @@ func TestGetPrecision(t *testing.T) {
 func TestSampleTime(t *testing.T) {
 	voidvar := int64(17)
 	t1 := SampleTime()
-	voidvar ^= SampleTime()
+	_ = SampleTime()
 	t1a := time.Now()
 	time.Sleep(3*time.Second + 30*time.Millisecond)
 	t2 := SampleTime()

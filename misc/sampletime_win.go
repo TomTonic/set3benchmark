@@ -9,6 +9,8 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+type TimeStamp = int64
+
 var (
 	modkernel32 = windows.NewLazySystemDLL("kernel32.dll")
 	procFreq    = modkernel32.NewProc("QueryPerformanceFrequency")

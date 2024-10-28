@@ -6,8 +6,6 @@ import (
 	"runtime/debug"
 )
 
-type TimeStamp = int64
-
 const iterationsForCallibration = 10_000_000
 
 var (
