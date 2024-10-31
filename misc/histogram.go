@@ -41,6 +41,7 @@ type HistogramOptions struct {
 	// NiceRange will try to round the bucket sizes to have a nicer output.
 	NiceRange bool
 	// Clamp values to either percentile or to a specific ns value.
+	ClampMinimum    float64
 	ClampMaximum    float64
 	ClampPercentile float64
 }
@@ -48,6 +49,7 @@ type HistogramOptions struct {
 var DefaultOptions = HistogramOptions{
 	BinCount:        10,
 	NiceRange:       true,
+	ClampMinimum:    0,
 	ClampMaximum:    0,
 	ClampPercentile: 0.999,
 }
@@ -103,6 +105,10 @@ func NewHistogram(nanoseconds []float64, opts *HistogramOptions) *Histogram {
 	hist.Minimum = nanoseconds[0]
 	hist.Maximum = nanoseconds[len(nanoseconds)-1]
 
+	if hist.Minimum < 0 {
+		panic("lwg3zp39qbhap9")
+	}
+
 	hist.Average = float64(0)
 	for _, x := range nanoseconds {
 		hist.Average += x
@@ -122,6 +128,11 @@ func NewHistogram(nanoseconds []float64, opts *HistogramOptions) *Histogram {
 
 	hist.P25, hist.P50, hist.P75, hist.P90, hist.P99, hist.P999, hist.P9999 = p(0.25), p(0.50), p(0.75), p(0.90), p(0.99), p(0.999), p(0.9999)
 
+	clampMinimum := hist.Minimum
+	if opts.ClampMinimum > 0 {
+		clampMinimum = opts.ClampMinimum
+	}
+
 	clampMaximum := hist.Maximum
 	if opts.ClampPercentile > 0 {
 		clampMaximum = p(opts.ClampPercentile)
@@ -130,21 +141,37 @@ func NewHistogram(nanoseconds []float64, opts *HistogramOptions) *Histogram {
 		clampMaximum = opts.ClampMaximum
 	}
 
+	if clampMaximum < hist.Minimum {
+		panic("oAWEGNLAGHq34g")
+	}
+
 	var minimum, spacing float64
 
 	if opts.NiceRange {
-		minimum, spacing = calculateNiceSteps(hist.Minimum, clampMaximum, opts.BinCount)
+		minimum, spacing = calculateNiceSteps(clampMinimum, clampMaximum, opts.BinCount)
 	} else {
-		minimum, spacing = calculateSteps(hist.Minimum, clampMaximum, opts.BinCount)
+		minimum, spacing = calculateSteps(clampMinimum, clampMaximum, opts.BinCount)
+	}
+
+	if minimum < 0.0 {
+		fmt.Printf("min: %f; max: %f; clampMinimum: %f; clampMaximum: %f", hist.Minimum, hist.Maximum, clampMinimum, clampMaximum)
+		panic("phfgap4zpa2t89")
+	}
+
+	if spacing < 0.0 {
+		panic("jhap9w3t8p92t2")
 	}
 
 	for i := range hist.Bins {
-		hist.Bins[i].Start = spacing*float64(i) + minimum
+		hist.Bins[i].Start = spacing*float64(i) + clampMinimum
+		if hist.Bins[i].Start < 0.0 {
+			panic("aph4pahgh")
+		}
 	}
-	hist.Bins[0].Start = hist.Minimum
+	hist.Bins[0].Start = clampMinimum
 
 	for _, x := range nanoseconds {
-		k := int(float64(x-minimum) / spacing)
+		k := int(float64(x-clampMinimum) / spacing)
 		if k < 0 {
 			k = 0
 		}

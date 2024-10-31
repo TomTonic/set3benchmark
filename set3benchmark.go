@@ -78,6 +78,48 @@ func addBenchmark(cfg singleAddBenchmarkConfig) (measurements []float64) {
 	return timePerRound
 }
 
+func addBenchmark2(cfg singleAddBenchmarkConfig) (measurements []float64) {
+	prng := misc.PRNG{State: cfg.seed}
+	numberOfSets := cfg.numOfSets
+	setSize := cfg.finalSetSize
+	set := set3.EmptyWithCapacity[uint64](uint32(cfg.initSize))
+	avgClear := 0.0
+	timePerRoundClearAndAdd := make([]float64, cfg.rounds)
+	debug.SetGCPercent(-1)
+	runtime.GC()
+	clearRounds := cfg.rounds * numberOfSets * 10
+	{
+		startTime := misc.SampleTime()
+		for range clearRounds {
+			set.Clear()
+		}
+		endTime := misc.SampleTime()
+		diff := float64(misc.DiffTimeStamps(startTime, endTime))
+		avgClear = (diff - misc.GetSampleTimeRuntime()) / float64(clearRounds)
+	}
+	debug.SetGCPercent(100)
+	quantizationError := misc.GetSampleTimePrecision() / (avgClear * float64(clearRounds))
+	fmt.Printf("avgClear: %.3fns (measuring runtime: %v, iterations: %d, quantization error: %e)\n", avgClear, time.Duration(int(avgClear*float64(clearRounds))), clearRounds, quantizationError)
+	debug.SetGCPercent(-1)
+	runtime.GC()
+	for r := range cfg.rounds {
+		//prng.State = cfg.seed
+		//prng.Round = 0
+		startTime := misc.SampleTime()
+		for range numberOfSets {
+			set.Clear()
+			for range setSize {
+				set.Add(prng.Uint64())
+			}
+		}
+		endTime := misc.SampleTime()
+		diff := float64(misc.DiffTimeStamps(startTime, endTime))
+		timePerRoundClearAndAdd[r] = diff - misc.GetSampleTimeRuntime() - avgClear
+	}
+	debug.SetGCPercent(100)
+	return timePerRoundClearAndAdd
+}
+
 func toNanoSecondsPerAdd(timePerRound []float64, addsPerRound uint64) []float64 {
 	nsPerAdd := make([]float64, len(timePerRound))
 	for i, tpr := range timePerRound {
@@ -415,17 +457,18 @@ func main() {
 	}
 	fmt.Print("\n")
 	ho := misc.HistogramOptions{
-		BinCount:        60,
-		NiceRange:       false,
-		ClampMaximum:    0,
-		ClampPercentile: 0.95,
+		BinCount:     51,
+		NiceRange:    false,
+		ClampMinimum: 7.0,
+		ClampMaximum: 9.55,
+		// ClampPercentile: 0.99,
 	}
 	for setSize := range setSizes(setup.fromSetSize, setup.toSetSize) {
 		//fmt.Printf("%d ", setSize)
 		for initSize := range initSizes2(setSize, setup.Pstep, setup.Istep, setup.RelativeLimit, setup.AbsoluteLimit) {
 			fmt.Printf("%d/%d:\n", setSize, initSize)
 			cfg := makeSingleAddBenchmarkConfig(initSize, setSize, setup.targetAddsPerRound, setup.totalAddsPerConfig, 0xABCDEF0123456789)
-			timePerRound := addBenchmark(cfg)
+			timePerRound := addBenchmark2(cfg)
 			misc.AssertPositive(timePerRound, "A")
 			nsPerAdd := toNanoSecondsPerAdd(timePerRound, cfg.actualAddsPerRound)
 			misc.AssertPositive(nsPerAdd, "B")
