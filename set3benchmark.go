@@ -448,6 +448,10 @@ func main() {
 
 	printSetup(setup)
 
+	eo := NewExcelOutput("result.xlsx")
+	eo.WriteConfigSheet(setup)
+	eo.Close()
+
 	start := time.Now()
 
 	fmt.Printf("setSize ")
@@ -490,10 +494,10 @@ func printSetup(p benchmarkSetup) {
 	fmt.Printf("SampleTime() runtime:\t\t%.2fns\n", misc.GetSampleTimeRuntime())
 	fmt.Printf("Max timer precision:\t\t%.2fns\n", misc.GetSampleTimePrecision())
 	overhead, qerror := getPRNGOverhead()
-	fmt.Printf("prng.Uint64() runtime:\t\t%.3fns (quantization error: %e)\n", overhead, qerror)
+	fmt.Printf("prng.Uint64() runtime:\t\t%.3fns (quantization error: %ens)\n", overhead, qerror*overhead)
 	fmt.Printf("Exp. Add(prng.Uint64()) rt:\t%.2fns\n", p.expRuntimePerAdd)
 	quantizationError := calcQuantizationError(p)
-	fmt.Printf("Add()'s per round:\t\t%d (expect a quantization error of %.3f%%, i.e. %.3fns per Add)\n", p.targetAddsPerRound, quantizationError, quantizationError*p.expRuntimePerAdd)
+	fmt.Printf("Add()'s per round:\t\t%d (expect a quantization error of %e, i.e. %ens per Add)\n", p.targetAddsPerRound, quantizationError, quantizationError*p.expRuntimePerAdd)
 	fmt.Printf("Add()'s per config:\t\t%d (should result in a benchmarking time of %.2fs per config)\n", p.totalAddsPerConfig, p.secondsPerConfig)
 	//	fmt.Printf("Set3 sizes:\t\t\tfrom %d to %d, stepsize %v\n", p.fromSetSize, p.toSetSize, p.step.String())
 	fmt.Printf("Set3 sizes:\t\t\tfrom %d to %d\n", p.fromSetSize, p.toSetSize)
@@ -505,7 +509,7 @@ func printSetup(p benchmarkSetup) {
 }
 
 func calcQuantizationError(p benchmarkSetup) float64 {
-	quantizationError := misc.GetSampleTimePrecision() * 100.0 / (p.expRuntimePerAdd * float64(p.targetAddsPerRound))
+	quantizationError := misc.GetSampleTimePrecision() / (p.expRuntimePerAdd * float64(p.targetAddsPerRound))
 	return quantizationError
 }
 

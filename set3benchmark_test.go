@@ -369,8 +369,8 @@ func TestCalcQuantizationError(t *testing.T) {
 				expRuntimePerAdd:   8.0,
 				targetAddsPerRound: 50_000,
 			},
-			expectedErrorWin: 100.0 * 100.0 / (8.0 * 50_000),
-			expectedErrorLin: 30.0 * 100.0 / (8.0 * 50_000),
+			expectedErrorWin: 100.0 / (8.0 * 50_000),
+			expectedErrorLin: 30.0 / (8.0 * 50_000),
 		},
 		{
 			name: "Small number of adds per round",
@@ -378,8 +378,8 @@ func TestCalcQuantizationError(t *testing.T) {
 				expRuntimePerAdd:   1.5,
 				targetAddsPerRound: 100,
 			},
-			expectedErrorWin: 100.0 * 100.0 / (1.5 * 100),
-			expectedErrorLin: 30.0 * 100.0 / (1.5 * 100),
+			expectedErrorWin: 100.0 / (1.5 * 100),
+			expectedErrorLin: 30.0 / (1.5 * 100),
 		},
 	}
 
