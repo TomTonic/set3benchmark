@@ -450,7 +450,6 @@ func main() {
 
 	eo := NewExcelOutput("result.xlsx")
 	eo.WriteConfigSheet(setup)
-	eo.Close()
 
 	start := time.Now()
 
@@ -467,6 +466,17 @@ func main() {
 		ClampMaximum: 9.55,
 		// ClampPercentile: 0.99,
 	}
+	eo.WriteLine("Results", 1, "initSize", "setSize", "Average", "Minimum", "P25", "P50", "P75", "P90", "P99", "P999", "P9999", "Maximum",
+		"7.00ns",
+		"7.05ns",
+		"7.10ns",
+		"7.15ns",
+		"7.20ns",
+		"7.25ns",
+		"7.30ns",
+		"7.35ns",
+	)
+
 	for setSize := range setSizes(setup.fromSetSize, setup.toSetSize) {
 		//fmt.Printf("%d ", setSize)
 		for initSize := range initSizes2(setSize, setup.Pstep, setup.Istep, setup.RelativeLimit, setup.AbsoluteLimit) {
@@ -479,6 +489,60 @@ func main() {
 			h := misc.NewHistogram(nsPerAdd, &ho)
 			h.Width = 120
 			fmt.Printf("%v\n", h.String())
+			eo.WriteLine("Results", 1, initSize, setSize, h.Average, h.Minimum, h.P25, h.P50, h.P75, h.P90, h.P99, h.P999, h.P9999, h.Maximum,
+				h.Bins[0].Count,
+				h.Bins[1].Count,
+				h.Bins[2].Count,
+				h.Bins[3].Count,
+				h.Bins[4].Count,
+				h.Bins[5].Count,
+				h.Bins[6].Count,
+				h.Bins[7].Count,
+				h.Bins[8].Count,
+				h.Bins[9].Count,
+				h.Bins[10].Count,
+				h.Bins[11].Count,
+				h.Bins[12].Count,
+				h.Bins[13].Count,
+				h.Bins[14].Count,
+				h.Bins[15].Count,
+				h.Bins[16].Count,
+				h.Bins[17].Count,
+				h.Bins[18].Count,
+				h.Bins[19].Count,
+				h.Bins[20].Count,
+				h.Bins[21].Count,
+				h.Bins[22].Count,
+				h.Bins[23].Count,
+				h.Bins[24].Count,
+				h.Bins[25].Count,
+				h.Bins[26].Count,
+				h.Bins[27].Count,
+				h.Bins[28].Count,
+				h.Bins[29].Count,
+				h.Bins[30].Count,
+				h.Bins[31].Count,
+				h.Bins[32].Count,
+				h.Bins[33].Count,
+				h.Bins[34].Count,
+				h.Bins[35].Count,
+				h.Bins[36].Count,
+				h.Bins[37].Count,
+				h.Bins[38].Count,
+				h.Bins[39].Count,
+				h.Bins[40].Count,
+				h.Bins[41].Count,
+				h.Bins[42].Count,
+				h.Bins[43].Count,
+				h.Bins[44].Count,
+				h.Bins[45].Count,
+				h.Bins[46].Count,
+				h.Bins[47].Count,
+				h.Bins[48].Count,
+				h.Bins[49].Count,
+				h.Bins[50].Count,
+			)
+			eo.Save()
 			//median := misc.Median(nsValues)
 			//fmt.Printf("%.3f ", median)
 			// fmt.Printf("%d ", initSize)
@@ -486,6 +550,7 @@ func main() {
 		//fmt.Printf("\n")
 	}
 	fmt.Print(printTotalRuntime(start))
+	eo.Close()
 }
 
 func printSetup(p benchmarkSetup) {

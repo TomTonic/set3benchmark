@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"runtime"
+	"strings"
 
 	misc "github.com/TomTonic/set3benchmark/misc"
+	cpuid "github.com/klauspost/cpuid/v2"
 	"github.com/xuri/excelize/v2"
 )
 
@@ -22,6 +24,12 @@ func NewExcelOutput(fileName string) *ExcelOutput {
 		cursor:    make(map[string]int),
 	}
 	return eo
+}
+
+func (eo *ExcelOutput) Save() {
+	if err := eo.excelFile.SaveAs(eo.FileName); err != nil {
+		fmt.Println(err)
+	}
 }
 
 func (eo *ExcelOutput) Close() {
@@ -44,6 +52,10 @@ func (eo *ExcelOutput) WriteLine(sheetName string, startCol int, values ...inter
 func (eo *ExcelOutput) getNextRow(sheetName string) int {
 	row, found := eo.cursor[sheetName]
 	if !found {
+		_, err := eo.excelFile.NewSheet(sheetName)
+		if err != nil {
+			fmt.Println(err)
+		}
 		eo.cursor[sheetName] = 2
 		return 1
 	}
@@ -58,8 +70,27 @@ func (eo *ExcelOutput) WriteConfigSheet(p benchmarkSetup) {
 		fmt.Println(err)
 		return
 	}
-	eo.WriteLine(cfgSheetName, 1, "Architecture", runtime.GOARCH)
-	eo.WriteLine(cfgSheetName, 1, "OS", runtime.GOOS)
+	eo.WriteLine(cfgSheetName, 1, "Architecture (GOARCH)", runtime.GOARCH)
+	eo.WriteLine(cfgSheetName, 1, "OS (GOOS)", runtime.GOOS)
+	eo.WriteLine(cfgSheetName, 1, "CPU Name", cpuid.CPU.BrandName)
+	eo.WriteLine(cfgSheetName, 1, "CPU Vendor ID", cpuid.CPU.VendorID)
+	eo.WriteLine(cfgSheetName, 1, "CPU Vendor String (raw)", cpuid.CPU.VendorString)
+	eo.WriteLine(cfgSheetName, 1, "CPU Family", cpuid.CPU.Family)
+	eo.WriteLine(cfgSheetName, 1, "CPU Model", cpuid.CPU.Model)
+	eo.WriteLine(cfgSheetName, 1, "CPU Stepping", cpuid.CPU.Stepping)
+	eo.WriteLine(cfgSheetName, 1, "CPU PhysicalCores", cpuid.CPU.PhysicalCores)
+	eo.WriteLine(cfgSheetName, 1, "CPU ThreadsPerCore", cpuid.CPU.ThreadsPerCore)
+	eo.WriteLine(cfgSheetName, 1, "CPU LogicalCores", cpuid.CPU.LogicalCores)
+	eo.WriteLine(cfgSheetName, 1, "CPU Cacheline", cpuid.CPU.CacheLine, "bytes")
+	eo.WriteLine(cfgSheetName, 1, "CPU L1 Data Cache:", cpuid.CPU.Cache.L1D, "bytes")
+	eo.WriteLine(cfgSheetName, 1, "CPU L1 Instruction Cache:", cpuid.CPU.Cache.L1I, "bytes")
+	eo.WriteLine(cfgSheetName, 1, "CPU L2 Cache:", cpuid.CPU.Cache.L2, "bytes")
+	eo.WriteLine(cfgSheetName, 1, "CPU L3 Cache:", cpuid.CPU.Cache.L3, "bytes")
+	eo.WriteLine(cfgSheetName, 1, "CPU Frequency", cpuid.CPU.Hz, "Hz", "(0 means unknown)")
+	eo.WriteLine(cfgSheetName, 1, "CPU Boost Frequency", cpuid.CPU.BoostFreq, "Hz", "(0 means unknown)")
+	eo.WriteLine(cfgSheetName, 1, "CPU Features:", strings.Join(cpuid.CPU.FeatureSet(), ", "))
+
+	eo.WriteLine(cfgSheetName, 1, "")
 	eo.WriteLine(cfgSheetName, 1, "Actual runtime per SampleTime()-call", misc.GetSampleTimeRuntime(), "ns/call")
 	eo.WriteLine(cfgSheetName, 1, "Maximum timer precision", misc.GetSampleTimePrecision(), "ns")
 	overhead, qerror := getPRNGOverhead()

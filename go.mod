@@ -5,6 +5,7 @@ go 1.23.2
 require (
 	github.com/TomTonic/Set3 v0.4.0
 	github.com/alecthomas/kong v1.3.0
+	github.com/klauspost/cpuid/v2 v2.2.8
 	github.com/stretchr/testify v1.9.0
 	github.com/xuri/excelize/v2 v2.9.0
 	golang.org/x/sys v0.26.0
