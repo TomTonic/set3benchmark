@@ -17,14 +17,14 @@ type Histo struct {
 	elements uint64
 	Width    int
 	Unit     string
-	slots    []uint32
+	slots    []uint64
 }
 
 func MakeHisto(from, to float64, steps int) *Histo {
 	result := &Histo{
 		from:     from,
 		to:       to,
-		slots:    make([]uint32, steps+1),
+		slots:    make([]uint64, steps+1),
 		min:      math.MaxFloat64,
 		max:      -math.MaxFloat64,
 		totalsum: 0,
@@ -116,7 +116,7 @@ func (h *Histo) GetNumberOfSlots() int {
 	return len(h.slots)
 }
 
-func (h *Histo) GetCount(slotIndex int) uint32 {
+func (h *Histo) GetCount(slotIndex int) uint64 {
 	if slotIndex < 0 {
 		slotIndex = 0
 	}
@@ -198,7 +198,7 @@ func (hist *Histo) WriteTo(w io.Writer) (int64, error) {
 		}
 	}
 
-	maxCount := uint32(0)
+	maxCount := uint64(0)
 	for _, count := range hist.slots {
 		if count > maxCount {
 			maxCount = count

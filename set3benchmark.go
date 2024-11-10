@@ -22,11 +22,11 @@ func getPRNGOverhead() (prngOverheadInNS, quantizationError float64) {
 		return prngOverhead, prngOverheadActualQuantizationError
 	}
 	roughlyExpectedRuntimeForOneCallInNS := 1.2
-	desiredErrorMargin := 1.0 / (1 << 18)
+	desiredErrorMargin := 1.0 / (1 << 16)
 	timerPrecisionInNS := misc.GetSampleTimePrecision()
 	calibrationCalls := int64(timerPrecisionInNS / (roughlyExpectedRuntimeForOneCallInNS * desiredErrorMargin))
 	prng := misc.PRNG{State: 0x1234567890abcde}
-	rounds := 201
+	rounds := 1001
 	times := make([]float64, rounds)
 	debug.SetGCPercent(-1)
 	for r := range rounds {
@@ -392,6 +392,34 @@ func makeSingleAddBenchmarkConfig(initSize, setSize, targetAddsPerRound, totalAd
 	return result
 }
 
+/*
+type LF2 struct {
+	Ssf  uint64   `help:"Set Size From. First set size to benchmark (inclusive)." default:"20"`
+	Sst  uint64   `help:"Set Size To. Last set size to benchmark (inclusive)." default:"30"`
+	Sssi *uint64  `help:"Set Size Step Integer. Calculate next set size to benchmark by adding an integer value. Default behaviour is to increment the set size by 1." xor:"Sssp, Sssi"`
+	Sssp *float64 `help:"Set Size Step Percentage. Calculate next set size to benchmark by adding a percentage value. Default behaviour is to increment the set size by 1." xor:"Sssp, Sssi"`
+	Isf  uint64   `help:"Init Size From. First set size to benchmark (inclusive)." default:"20"`
+	Ist  uint64   `help:"Init Size To. Last set size to benchmark (inclusive)." default:"30"`
+	Issi *uint64  `help:"Init Size Step Integer. Calculate next set size to benchmark by adding an integer value. Default behaviour is to increment the set size by 1." xor:"Sssp, Sssi"`
+	Issp *float64 `help:"Init Size Step Percentage. Calculate next set size to benchmark by adding a percentage value. Default behaviour is to increment the set size by 1." xor:"Sssp, Sssi"`
+}
+*/
+
+type AddBenchSingleConf struct {
+	Number        uint64        `help:"Number of values to add to an empty set." default:"20" short:"n"`
+	Init          uint64        `help:"Initial capacity allocation value to create an empty set." default:"30" short:"i"`
+	Experiments   uint64        `help:"Number of experiments/rounds of measurments." default:"2000" short:"e"`
+	Target        time.Duration `help:"Target runtime per experiment. (Refer to https://pkg.go.dev/time#ParseDuration for syntax.)" short:"t" default:"10ms"`
+	HistLower     float64       `help:"Histogram lower bound value in nanoseconds (inclusive)." default:"7.0" short:"l"`
+	HistUpper     float64       `help:"Histogram upper bound value in nanoseconds (inclusive)." default:"9.5" short:"u"`
+	HistSteps     uint32        `help:"Number of steps in histogram between upper and lower bound." default:"50" short:"s"`
+	HistWidth     uint32        `help:"With of the historam bars on the console." default:"40" short:"w"`
+	Xlsx          bool          `help:"Generate XLSX file containing the results in current direcory." default:"true" short:"x"`
+	Rand          float64       `help:"Runtime of random number generation in nanoseconds, i.e. one call to prng.Uint64(). If this parameter is omited it will automatically be determined, loweing the startup time." short:"r"`
+	Precision     float64       `help:"Maximum precision of system timer (quantization error) in nanoseconds. If this parameter is omited it will automatically be determined, loweing the startup time." short:"p"`
+	RuntimePerAdd float64       `help:"Expected runtime per single Add(prng.Uint64()) instruction in nanoseconds. Used to calculate the necessary number of iterations to meet the target runtime per experiment." short:"a" default:"8.0"`
+}
+
 var cli struct {
 	Add struct {
 		Loadfactor struct {
@@ -405,6 +433,8 @@ var cli struct {
 			RelativeLimit    *float64      `help:"Increase initial (pre-allocated) set sizes until at least x% headroom are reached. You can either specify a relative-limit or an absolute-limit. Default is a relative-limit of 100%." xor:"RelativeLimit, AbsoluteLimit"`
 			AbsoluteLimit    *uint64       `help:"Increase initial (pre-allocated) set sizes until at least an initial set size of x is reached. You can either specify a relative-limit or an absolute-limit. Default is a relative-limit of 100%." xor:"RelativeLimit, AbsoluteLimit"`
 		} `cmd:"" help:"Perform a loadfactor test using different initial (pre-allocated) set sizes. This benchmark creates empty sets of a defined size x and then adds y random numers via Add(prng.Uint64()). Any combination of x and y is called 'configration'."`
+		// Loadfactor2 LF2 `cmd:"" help:"Perform a loadfactor test using different initial (pre-allocated) set sizes. This benchmark creates empty sets of a defined size x and then adds y random numers via Add(prng.Uint64()). Any combination of x and y is called 'configration'."`
+		SingleConf AddBenchSingleConf `cmd:"" help:"Perform a benchmark adding random uint64 to an empty set. This benchmark creates an empty set of a defined initial capacity and then adds a defined random numers via Add(prng.Uint64()). This procedure is repeated many times during an experiment to compensate for the quantisation error introduced by the systems limited timer precision."`
 	} `cmd:"" help:"Benchmark adding random uint64 to an empty set."`
 }
 
