@@ -8,7 +8,7 @@ require (
 	github.com/TomTonic/Set3 v0.4.0
 	github.com/alecthomas/kong v1.4.0
 	github.com/klauspost/cpuid/v2 v2.2.9
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	github.com/xuri/excelize/v2 v2.9.0
 	golang.org/x/sys v0.27.0
 )
