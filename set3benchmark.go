@@ -21,10 +21,11 @@ func getPRNGOverhead() (prngOverheadInNS, quantizationError float64) {
 	if prngOverhead != -1.0 {
 		return prngOverhead, prngOverheadActualQuantizationError
 	}
-	roughlyExpectedRuntimeForOneCallInNS := 1.2
+	//	roughlyExpectedRuntimeForOneCallInNS := 1.2
 	desiredErrorMargin := 1.0 / (1 << 16)
 	timerPrecisionInNS := misc.GetSampleTimePrecision()
-	calibrationCalls := int64(timerPrecisionInNS / (roughlyExpectedRuntimeForOneCallInNS * desiredErrorMargin))
+	//	calibrationCalls := int64(timerPrecisionInNS / (roughlyExpectedRuntimeForOneCallInNS * desiredErrorMargin))
+	calibrationCalls := int64(timerPrecisionInNS / desiredErrorMargin)
 	prng := misc.PRNG{State: 0x1234567890abcde}
 	rounds := 1001
 	times := make([]float64, rounds)
@@ -41,7 +42,8 @@ func getPRNGOverhead() (prngOverheadInNS, quantizationError float64) {
 	sampleTimeOverhead := misc.GetSampleTimeRuntime()
 	medTimeForOneRound := misc.Median(times) - sampleTimeOverhead
 	prngOverhead = medTimeForOneRound / float64(calibrationCalls)
-	prngOverheadActualQuantizationError = timerPrecisionInNS / (float64(calibrationCalls) * medTimeForOneRound)
+	//	prngOverheadActualQuantizationError = timerPrecisionInNS / (float64(calibrationCalls) * medTimeForOneRound)
+	prngOverheadActualQuantizationError = timerPrecisionInNS / float64(calibrationCalls)
 	return prngOverhead, prngOverheadActualQuantizationError
 }
 
@@ -438,12 +440,24 @@ func main() {
 	case "add loadfactor <from> <to>":
 		// fmt.Println(cli.Add.Loadfactor.From, cli.Add.Loadfactor.To, cli.Add.Loadfactor.AddsPerRound, cli.Add.Loadfactor.RuntimePerConfig, cli.Add.Loadfactor.RuntimePerAdd)
 		// fmt.Println(cli.Add.Loadfactor.Pstep, cli.Add.Loadfactor.Istep, cli.Add.Loadfactor.RelativeLimit, cli.Add.Loadfactor.AbsoluteLimit)
+		doLoadfactor()
+	case "add single-conf":
+		doBenchmark3()
 	default:
 		fmt.Print("Check ctx.Command(): ")
 		fmt.Println(ctx.Command())
 		panic("done.")
 	}
 
+}
+
+func doBenchmark3() {
+	hist := doSingleAddBenchmarkSet3(cli.Add.SingleConf)
+	hist.Width = 120
+	fmt.Printf("%v\n", hist.String())
+}
+
+func doLoadfactor() {
 	var pp programParametrization
 	pp.fromSetSize = cli.Add.Loadfactor.From
 	pp.toSetSize = cli.Add.Loadfactor.To
@@ -589,7 +603,8 @@ func printSetup(p benchmarkSetup) {
 }
 
 func calcQuantizationError(p benchmarkSetup) float64 {
-	quantizationError := misc.GetSampleTimePrecision() / (p.expRuntimePerAdd * float64(p.targetAddsPerRound))
+	//	quantizationError := misc.GetSampleTimePrecision() / (p.expRuntimePerAdd * float64(p.targetAddsPerRound))
+	quantizationError := misc.GetSampleTimePrecision() / float64(p.targetAddsPerRound)
 	return quantizationError
 }
 
