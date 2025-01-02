@@ -22,7 +22,7 @@ type SingleAddBenchmarkConfig struct {
 	Xlsx        bool    `help:"Generate XLSX file containing the results in current direcory. (Default is 'true'.)" default:"true" short:"x"`
 	RandRt      float64 `help:"Runtime of random number generation in nanoseconds, i.e. one call to prng.Uint64(). If this parameter is omited it will automatically be determined, loweing the startup time." short:"r"`
 	Precision   float64 `help:"Maximum precision of system timer (quantization error) in nanoseconds. If this parameter is omited it will automatically be determined, loweing the startup time." short:"p"`
-	PrngSeed    uint64  `help:"Seed value for the pseudo random number generator." default:"0xABCDEF0987654321"`
+	PrngSeed    uint64  `help:"Seed value for the pseudo random number generator." default:"3571113171923"`
 	//RuntimePerAdd float64 `help:"Expected runtime per single Add(prng.Uint64()) instruction in nanoseconds. Used to calculate the necessary number of iterations to meet the target runtime per experiment." short:"a" default:"8.0"`
 	//Target        time.Duration `help:"Target runtime per experiment. (Refer to https://pkg.go.dev/time#ParseDuration for syntax.)" short:"t" default:"10ms"`
 }
