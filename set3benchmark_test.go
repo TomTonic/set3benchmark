@@ -378,7 +378,7 @@ func TestCalcQuantizationError(t *testing.T) {
 				expRuntimePerAdd:   1.5,
 				targetAddsPerRound: 100,
 			},
-			expectedErrorWin: 100.0 / 100.0,
+			expectedErrorWin: 1.0,
 			expectedErrorLin: 30.0 / 100.0,
 		},
 	}

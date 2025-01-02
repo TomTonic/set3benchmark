@@ -442,13 +442,19 @@ func main() {
 		// fmt.Println(cli.Add.Loadfactor.Pstep, cli.Add.Loadfactor.Istep, cli.Add.Loadfactor.RelativeLimit, cli.Add.Loadfactor.AbsoluteLimit)
 		doLoadfactor()
 	case "add single-conf":
-		doLoadfactor()
+		doBenchmark3()
 	default:
 		fmt.Print("Check ctx.Command(): ")
 		fmt.Println(ctx.Command())
 		panic("done.")
 	}
 
+}
+
+func doBenchmark3() {
+	hist := doSingleAddBenchmarkSet3(cli.Add.SingleConf)
+	hist.Width = 120
+	fmt.Printf("%v\n", hist.String())
 }
 
 func doLoadfactor() {
