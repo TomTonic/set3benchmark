@@ -145,7 +145,7 @@ func TestGetP(t *testing.T) {
 	h.Add(5)
 	h.Add(7)
 	if p := h.GetP(-0.1); math.Abs(p) > 1e-9 {
-		t.Fatalf("expected P(-0.1) to be 5, got %f", p)
+		t.Fatalf("expected P(-0.1) to be 0, got %f", p)
 	}
 	if p := h.GetP(0.5); math.Abs(p-4) > 1e-9 {
 		t.Fatalf("expected P(0.5) to be 5, got %f", p)
@@ -163,6 +163,40 @@ func TestGetP(t *testing.T) {
 		t.Fatalf("expected P90 to be 9, got %f", p)
 	}
 	if p := h.GetP(1.1); math.Abs(p-10) > 1e-9 {
+		t.Fatalf("expected P(1.1) to be 10, got %f", p)
+	}
+}
+
+func TestGetP2(t *testing.T) {
+	// slot   0         1         2         3         4         5
+	// <------|----v----|----v----|----v----|----v----|----v----|------>
+	// value  0    1    2    3    4    5    6    7    8    9    10
+	//       <-0.99
+	//             1.0->
+	h := MakeHisto(1, 11, 5)
+	h.Add(2)
+	h.Add(4)
+	h.Add(6)
+	h.Add(8)
+	if p := h.GetP(-0.1); math.Abs(p-1) > 1e-9 {
+		t.Fatalf("expected P(-0.1) to be 1, got %f", p)
+	}
+	if p := h.GetP(0.5); math.Abs(p-5) > 1e-9 {
+		t.Fatalf("expected P(0.5) to be 5, got %f", p)
+	}
+	if p := h.GetP25(); math.Abs(p-3) > 1e-9 {
+		t.Fatalf("expected P25 to be 2.5, got %f", p)
+	}
+	if p := h.GetP50(); math.Abs(p-5) > 1e-9 {
+		t.Fatalf("expected P50 to be 5, got %f", p)
+	}
+	if p := h.GetP75(); math.Abs(p-7) > 1e-9 {
+		t.Fatalf("expected P75 to be 7.5, got %f", p)
+	}
+	if p := h.GetP90(); math.Abs(p-9) > 1e-9 {
+		t.Fatalf("expected P90 to be 9, got %f", p)
+	}
+	if p := h.GetP(1.1); math.Abs(p-11) > 1e-9 {
 		t.Fatalf("expected P(1.1) to be 10, got %f", p)
 	}
 }

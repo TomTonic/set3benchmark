@@ -92,7 +92,7 @@ func (h *Histo) GetP(x float64) float64 {
 		idx++
 		count += uint64(h.slots[idx])
 	}
-	result := float64(idx) * h.step
+	result := h.from + (float64(idx) * h.step)
 	return result
 }
 
