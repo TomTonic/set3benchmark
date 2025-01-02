@@ -347,6 +347,7 @@ func niceNumber(span float64, round bool) float64 {
 	return nice * math.Pow(10, exp)
 }
 
+/*
 func truncate(v float64, digits int) float64 {
 	if digits == 0 || v == 0 {
 		return 0
@@ -364,3 +365,4 @@ func round(v float64, digits int) float64 {
 	scale := math.Pow(10, math.Floor(math.Log10(v))+1-float64(digits))
 	return scale * math.Round(v/scale)
 }
+*/
