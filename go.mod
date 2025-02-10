@@ -6,7 +6,7 @@ go 1.23.5
 
 require (
 	github.com/TomTonic/Set3 v0.4.1
-	github.com/alecthomas/kong v1.7.0
+	github.com/alecthomas/kong v1.8.0
 	github.com/klauspost/cpuid/v2 v2.2.9
 	github.com/stretchr/testify v1.10.0
 	github.com/xuri/excelize/v2 v2.9.0
