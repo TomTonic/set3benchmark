@@ -10,7 +10,7 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.11
 	github.com/stretchr/testify v1.10.0
 	github.com/xuri/excelize/v2 v2.9.1
-	golang.org/x/sys v0.33.0
+	golang.org/x/sys v0.34.0
 )
 
 require (
