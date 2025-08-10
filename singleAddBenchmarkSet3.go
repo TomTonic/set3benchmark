@@ -13,10 +13,10 @@ import (
 type SingleAddBenchmarkConfig struct {
 	Number      uint64  `help:"Number of values to add to an empty set." default:"20" short:"n"`
 	Capacity    uint32  `help:"Initial capacity allocation value to create an empty set." default:"30" short:"c"`
-	Experiments uint64  `help:"Number of experiments or rounds of measurments." default:"2000" short:"e"`
-	Iterations  uint64  `help:"Number of iterations per experiment. The default of 25 million menas roughly 200ms per measurement." default:"25000000" short:"i"`
-	HistLower   float64 `help:"Histogram lower bound value in nanoseconds (inclusive)." default:"7.0" short:"l"`
-	HistUpper   float64 `help:"Histogram upper bound value in nanoseconds (inclusive)." default:"9.5" short:"u"`
+	Experiments uint64  `help:"Number of experiments (measurments of loops)." default:"201" short:"e"`
+	Iterations  uint64  `help:"Number of loop iterations per experiment. The default of 12.5 million means roughly 10ms per measurement." default:"1250000" short:"i"`
+	HistLower   float64 `help:"Histogram lower bound value in nanoseconds (inclusive)." default:"6.0" short:"l"`
+	HistUpper   float64 `help:"Histogram upper bound value in nanoseconds (inclusive)." default:"8.5" short:"u"`
 	HistSteps   uint32  `help:"Number of steps in histogram between upper and lower bound." default:"50" short:"s"`
 	HistWidth   uint32  `help:"With of the historam bars on the console." default:"40" short:"w"`
 	Xlsx        bool    `help:"Generate XLSX file containing the results in current direcory. (Default is 'true'.)" default:"true" short:"x"`
@@ -31,8 +31,8 @@ func doSingleAddBenchmarkSet3(cfg SingleAddBenchmarkConfig) *misc.Histo {
 	prng := misc.PRNG{State: cfg.PrngSeed}
 	setSize := cfg.Number
 	iter := cfg.Iterations
-	set := set3.EmptyWithCapacity[uint64](cfg.Capacity)
 	histo := misc.MakeHisto(cfg.HistLower, cfg.HistUpper, int(cfg.HistSteps))
+	set := set3.EmptyWithCapacity[uint64](cfg.Capacity)
 	avgClear, _ := measureAvgClear(cfg.Iterations, cfg.Precision, set)
 	runtime.GC()
 	debug.SetGCPercent(-1)
@@ -70,7 +70,8 @@ func measureAvgClear(iterations uint64, precision float64, set *set3.Set3[uint64
 	debug.SetGCPercent(100)
 	diff := misc.DiffTimeStamps(startTime, endTime)
 	avgClear = (float64(diff) - precision) / float64(clearRounds)
-	quantizationError = misc.GetSampleTimePrecision() / (avgClear * float64(clearRounds))
-	fmt.Printf("avgClear: %.3fns (measuring runtime: %v, iterations: %d, quantization error: %e)\n", avgClear, time.Duration(int(avgClear*float64(clearRounds))), clearRounds, quantizationError)
+	//quantizationError = precision / (avgClear * float64(clearRounds))
+	quantizationError = precision / float64(clearRounds)
+	fmt.Printf("avgClear: %.3fns (measuring runtime: %v, iterations: %d, quantization error: %e)\n", avgClear, time.Duration(diff), clearRounds, quantizationError)
 	return
 }
