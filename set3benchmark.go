@@ -166,14 +166,14 @@ func benchmarkSetupFrom(p programParametrization) (benchmarkSetup, error) {
 		totalAddsPerConfig:     uint64(p.secondsPerConfig * 1_000_000_000.0 / p.expRuntimePerAdd),
 	}
 	if p.Pstep != nil && p.Istep != nil {
-		return result, errors.New("Pstep and Istep are both defined")
+		return result, errors.New("parameter error: Pstep and Istep are both defined")
 	}
 	if p.Pstep == nil && p.Istep == nil {
 		one := uint64(1)
 		result.Istep = &one
 	}
 	if p.RelativeLimit != nil && p.AbsoluteLimit != nil {
-		return result, errors.New("RelativeLimit and AbsoluteLimit are both defined")
+		return result, errors.New("parameter error: RelativeLimit and AbsoluteLimit are both defined")
 	}
 	if p.RelativeLimit == nil && p.AbsoluteLimit == nil {
 		onhundret := 100.0
@@ -210,16 +210,16 @@ func setSizes(setSizeFrom, setSizeTo uint64) func(yield func(uint64) bool) {
 func stepsHeadings(setSizeFrom, setSizeTo uint64, Pstep *float64, Istep *uint64, RelativeLimit *float64, AbsoluteLimit *uint64) ([]string, error) {
 	result := make([]string, 0, 100)
 	if Pstep == nil && Istep == nil {
-		return nil, errors.New("Pstep == nil && Istep == nil")
+		return nil, errors.New("parameter error: Pstep == nil && Istep == nil")
 	}
 	if Pstep != nil && Istep != nil {
-		return nil, errors.New("Pstep != nil && Istep != nil")
+		return nil, errors.New("parameter error: Pstep != nil && Istep != nil")
 	}
 	if RelativeLimit == nil && AbsoluteLimit == nil {
-		return nil, errors.New("RelativeLimit == nil && Istep == nil")
+		return nil, errors.New("parameter error: RelativeLimit == nil && Istep == nil")
 	}
 	if RelativeLimit != nil && AbsoluteLimit != nil {
-		return nil, errors.New("RelativeLimit != nil && AbsoluteLimit != nil")
+		return nil, errors.New("parameter error: RelativeLimit != nil && AbsoluteLimit != nil")
 	}
 	if Pstep != nil && RelativeLimit != nil {
 		/*
