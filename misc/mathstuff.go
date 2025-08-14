@@ -59,7 +59,7 @@ func Statistics(data []float64) (mean, variance, stddev float64) {
 	mean = sum / n
 
 	for _, value := range data {
-		variance += math.Pow(value-mean, 2)
+		variance += (value - mean) * (value - mean)
 	}
 	variance /= n
 	stddev = math.Sqrt(variance)
