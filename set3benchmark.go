@@ -452,6 +452,16 @@ func main() {
 }
 
 func doBenchmark3() {
+	if cli.Add.SingleConf.Precision == 0.0 {
+		cli.Add.SingleConf.Precision = misc.GetSampleTimePrecision()
+	}
+	fmt.Print("GetSampleTimePrecision: ")
+	fmt.Println(cli.Add.SingleConf.Precision)
+	if cli.Add.SingleConf.RandRt == 0.0 {
+		cli.Add.SingleConf.RandRt, _ = getPRNGOverhead()
+	}
+	fmt.Print("getPRNGOverhead: ")
+	fmt.Println(cli.Add.SingleConf.RandRt)
 	hist := doSingleAddBenchmarkSet3(cli.Add.SingleConf)
 	hist.Width = 120
 	fmt.Printf("%v\n", hist.String())
