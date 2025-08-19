@@ -5,7 +5,7 @@ go 1.24.6
 // replace github.com/TomTonic/Set3 => ../Set3
 
 require (
-	github.com/TomTonic/Set3 v0.4.1
+	github.com/TomTonic/Set3 v0.4.2
 	github.com/alecthomas/kong v1.12.1
 	github.com/klauspost/cpuid/v2 v2.3.0
 	github.com/stretchr/testify v1.10.0
