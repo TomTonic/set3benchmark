@@ -22,24 +22,24 @@ func TestPrngSeqLength(t *testing.T) {
 
 func TestPrngDeterminism(t *testing.T) {
 	state1 := PRNG{State: 0x1234567890ABCDEF}
-	state2 := PRNG{State: 0x1234567890ABCDEF}
+	state2 := PRNG{State: 0x1234567890ABCDEF} // create two differnet instances with the same seed
 	limit := 30_000_000
-	for i := 0; i < limit; i++ {
+	for i := range limit {
 		v1 := state1.Uint64()
 		v2 := state2.Uint64()
-		assert.True(t, v1 == v2, "in sync: values not equal in round %d", i)
+		assert.True(t, v1 == v2, "out of sync: values not equal in round %d", i)
 	}
 	_ = state2.Uint64() // skip one value to get both prng out of sync
-	for i := 0; i < limit; i++ {
+	for i := range limit {
 		v1 := state1.Uint64()
 		v2 := state2.Uint64()
-		assert.False(t, v1 == v2, "out of sync: values equal in round %d", i)
+		assert.False(t, v1 == v2, "in: values equal in round %d", i)
 	}
 	_ = state1.Uint64() // get both prng back in sync
-	for i := 0; i < limit; i++ {
+	for i := range limit {
 		v1 := state1.Uint64()
 		v2 := state2.Uint64()
-		assert.True(t, v1 == v2, "back in sync: values not equal in round %d", i)
+		assert.True(t, v1 == v2, "out of sync: values not equal in round %d", i)
 	}
 }
 

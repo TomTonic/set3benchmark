@@ -6,12 +6,13 @@ import (
 )
 
 // see https://en.wikipedia.org/wiki/Xorshift#xorshift*
-// This PRNG is deterministic and has a period of 2^64-1. This way we can ensure, we always get a new 'random' number, that is unknown to the set.
+// This PRNG is deterministic has a period of 2^64-1. This way we can ensure, we always get a new 'random' number, that is unknown to the set.
 type PRNG struct {
 	State uint64
 	Round uint64 // for debugging purposes
 }
 
+// This function has a deterministic (i.e. constant) runtime and a high probability to be inlined by the compiler.
 func (thisState *PRNG) Uint64() uint64 {
 	x := thisState.State
 	x ^= x >> 12
