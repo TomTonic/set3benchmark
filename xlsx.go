@@ -5,7 +5,7 @@ import (
 	"runtime"
 	"strings"
 
-	misc "github.com/TomTonic/set3benchmark/misc"
+	rtcompare "github.com/TomTonic/rtcompare"
 	cpuid "github.com/klauspost/cpuid/v2"
 	"github.com/xuri/excelize/v2"
 )
@@ -97,8 +97,7 @@ func (eo *ExcelOutput) WriteConfigSheet(p benchmarkSetup) {
 	eo.WriteLine(cfgSheetName, 1, "CPU Features:", strings.Join(cpuid.CPU.FeatureSet(), ", "))
 
 	eo.WriteLine(cfgSheetName, 1, "")
-	eo.WriteLine(cfgSheetName, 1, "Measured runtime per SampleTime()-call:", misc.GetSampleTimeRuntime(), "ns/call")
-	eo.WriteLine(cfgSheetName, 1, "Maximum timer precision:", misc.GetSampleTimePrecision(), "ns")
+	eo.WriteLine(cfgSheetName, 1, "Maximum timer precision:", rtcompare.GetSampleTimePrecision(), "ns")
 	overhead, qerror := getPRNGOverhead()
 	eo.WriteLine(cfgSheetName, 1, "Measured runtime per prng.Uint64()-call:", overhead, "ns/call", "quantization error:", qerror, "ns/call")
 	eo.WriteLine(cfgSheetName, 1, "Expected runtime per Add(prng.Uint64())-call:", p.expRuntimePerAdd, "ns/call")

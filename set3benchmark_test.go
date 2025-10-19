@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	misc "github.com/TomTonic/set3benchmark/misc"
+	rtcompare "github.com/TomTonic/rtcompare"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,7 +27,7 @@ func TestDoBenchmark2(t *testing.T) {
 	assert.False(t, containsZero(result), "Result should not contain zeros, but it does.")
 	assert.False(t, containsNegative(result), "Result should not contain negative numbers, but it does.")
 
-	reportedPrecision := misc.GetSampleTimePrecision()
+	reportedPrecision := float64(rtcompare.GetSampleTimePrecision())
 	assert.True(t, atLeastNtimesPrecision(20.0, reportedPrecision, result),
 		"Result should only contain values that exceed %fx the timer precision of %fns, but it does not. The minimum Value is %v.", 20.0, reportedPrecision, minVal(result))
 }

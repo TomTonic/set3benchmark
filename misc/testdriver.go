@@ -2,16 +2,18 @@ package misc
 
 import (
 	"math"
+
+	rtcompare "github.com/TomTonic/rtcompare"
 )
 
 type SearchDataDriver struct {
-	rng       *PRNG
+	rng       *rtcompare.DPRNG
 	SetValues []uint64
 	hitRatio  float64
 }
 
 func NewSearchDataDriver(setSize int, targetHitRatio float64, seed uint64) *SearchDataDriver {
-	s := PRNG{State: seed}
+	s := rtcompare.NewDPRNG(seed)
 	vals := uniqueRandomNumbers(setSize, &s)
 	result := &SearchDataDriver{
 		rng: &s,
@@ -41,9 +43,9 @@ func (thisCfg *SearchDataDriver) NextSearchValue() uint64 {
 	return result
 }
 
-func uniqueRandomNumbers(setSize int, rng *PRNG) []uint64 {
+func uniqueRandomNumbers(setSize int, rng *rtcompare.DPRNG) []uint64 {
 	result := make([]uint64, setSize)
-	for i := 0; i < setSize; i++ {
+	for i := range setSize {
 		result[i] = rng.Uint64()
 	}
 	return result

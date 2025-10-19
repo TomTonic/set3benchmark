@@ -7,6 +7,7 @@ import (
 	"time"
 
 	set3 "github.com/TomTonic/Set3"
+	rtcompare "github.com/TomTonic/rtcompare"
 	misc "github.com/TomTonic/set3benchmark/misc"
 )
 
@@ -28,7 +29,7 @@ type SingleAddBenchmarkConfig struct {
 }
 
 func doSingleAddBenchmarkSet3(cfg SingleAddBenchmarkConfig) *misc.Histo {
-	prng := misc.PRNG{State: cfg.PrngSeed}
+	prng := rtcompare.NewDPRNG(cfg.PrngSeed)
 	setSize := cfg.Number
 	iter := cfg.Iterations
 	set := set3.EmptyWithCapacity[uint64](cfg.Capacity)
@@ -39,15 +40,15 @@ func doSingleAddBenchmarkSet3(cfg SingleAddBenchmarkConfig) *misc.Histo {
 	for range cfg.Experiments {
 		//prng.State = cfg.PrngSeed
 		//prng.Round = 0
-		startTime := misc.SampleTime()
+		startTime := rtcompare.SampleTime()
 		for range iter {
 			set.Clear()
 			for range setSize {
 				set.Add(prng.Uint64())
 			}
 		}
-		endTime := misc.SampleTime()
-		diff := misc.DiffTimeStamps(startTime, endTime)
+		endTime := rtcompare.SampleTime()
+		diff := rtcompare.DiffTimeStamps(startTime, endTime)
 		timeForClearAndAddsAndRng := (float64(diff) - cfg.Precision) / float64(iter)
 		timeForAddsAndRng := timeForClearAndAddsAndRng - avgClear
 		timeForOneAddAndRng := timeForAddsAndRng / float64(setSize)
@@ -62,15 +63,15 @@ func measureAvgClear(iterations uint64, precision float64, set *set3.Set3[uint64
 	clearRounds := iterations * 10
 	runtime.GC()
 	debug.SetGCPercent(-1)
-	startTime := misc.SampleTime()
+	startTime := rtcompare.SampleTime()
 	for range clearRounds {
 		set.Clear()
 	}
-	endTime := misc.SampleTime()
+	endTime := rtcompare.SampleTime()
 	debug.SetGCPercent(100)
-	diff := misc.DiffTimeStamps(startTime, endTime)
+	diff := rtcompare.DiffTimeStamps(startTime, endTime)
 	avgClear = (float64(diff) - precision) / float64(clearRounds)
-	quantizationError = misc.GetSampleTimePrecision() / (avgClear * float64(clearRounds))
+	quantizationError = float64(rtcompare.GetSampleTimePrecision()) / (avgClear * float64(clearRounds))
 	fmt.Printf("avgClear: %.3fns (measuring runtime: %v, iterations: %d, quantization error: %e)\n", avgClear, time.Duration(int(avgClear*float64(clearRounds))), clearRounds, quantizationError)
 	return
 }

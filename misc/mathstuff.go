@@ -2,49 +2,7 @@ package misc
 
 import (
 	"math"
-	"sort"
 )
-
-// see https://en.wikipedia.org/wiki/Xorshift#xorshift*
-// This PRNG is deterministic has a period of 2^64-1. This way we can ensure, we always get a new 'random' number, that is unknown to the set.
-type PRNG struct {
-	State uint64
-	Round uint64 // for debugging purposes
-}
-
-// This function has a deterministic (i.e. constant) runtime and a high probability to be inlined by the compiler.
-func (thisState *PRNG) Uint64() uint64 {
-	x := thisState.State
-	x ^= x >> 12
-	x ^= x << 25
-	x ^= x >> 27
-	thisState.State = x
-	thisState.Round++
-	return x * 0x2545F4914F6CDD1D
-}
-
-/*
-func (thisState *prngState) Uint32() uint32 {
-	x := thisState.Uint64()
-	x >>= 32 // the upper 32 bit have better 'randomness', see https://en.wikipedia.org/wiki/Xorshift#xorshift*
-	return uint32(x)
-}
-*/
-
-func Median(data []float64) float64 {
-	if len(data) == 0 {
-		return 0
-	}
-	dataCopy := make([]float64, len(data))
-	copy(dataCopy, data)
-	sort.Float64s(dataCopy)
-
-	l := len(dataCopy)
-	if l%2 == 0 {
-		return (dataCopy[l/2-1] + dataCopy[l/2]) / 2
-	}
-	return dataCopy[l/2]
-}
 
 func Statistics(data []float64) (mean, variance, stddev float64) {
 	if len(data) == 0 {

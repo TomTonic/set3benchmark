@@ -11,6 +11,7 @@ import (
 	"github.com/alecthomas/kong"
 
 	set3 "github.com/TomTonic/Set3"
+	rtcompare "github.com/TomTonic/rtcompare"
 	misc "github.com/TomTonic/set3benchmark/misc"
 )
 
@@ -23,32 +24,31 @@ func getPRNGOverhead() (prngOverheadInNS, quantizationError float64) {
 	}
 	//	roughlyExpectedRuntimeForOneCallInNS := 1.2
 	desiredErrorMargin := 1.0 / (1 << 16)
-	timerPrecisionInNS := misc.GetSampleTimePrecision()
+	timerPrecisionInNS := rtcompare.GetSampleTimePrecision()
 	//	calibrationCalls := int64(timerPrecisionInNS / (roughlyExpectedRuntimeForOneCallInNS * desiredErrorMargin))
-	calibrationCalls := int64(timerPrecisionInNS / desiredErrorMargin)
-	prng := misc.PRNG{State: 0x1234567890abcde}
+	calibrationCalls := int64(float64(timerPrecisionInNS) / desiredErrorMargin)
+	prng := rtcompare.NewDPRNG(0x1234567890abcde)
 	rounds := 1001
 	times := make([]float64, rounds)
 	debug.SetGCPercent(-1)
 	for r := range rounds {
-		start := misc.SampleTime()
+		start := rtcompare.SampleTime()
 		for i := int64(0); i < calibrationCalls; i++ {
 			prng.Uint64()
 		}
-		stop := misc.SampleTime()
-		times[r] = float64(misc.DiffTimeStamps(start, stop))
+		stop := rtcompare.SampleTime()
+		times[r] = float64(rtcompare.DiffTimeStamps(start, stop))
 	}
 	debug.SetGCPercent(100)
-	sampleTimeOverhead := misc.GetSampleTimeRuntime()
-	medTimeForOneRound := misc.Median(times) - sampleTimeOverhead
+	medTimeForOneRound := rtcompare.QuickMedian(times)
 	prngOverhead = medTimeForOneRound / float64(calibrationCalls)
 	//	prngOverheadActualQuantizationError = timerPrecisionInNS / (float64(calibrationCalls) * medTimeForOneRound)
-	prngOverheadActualQuantizationError = timerPrecisionInNS / float64(calibrationCalls)
+	prngOverheadActualQuantizationError = float64(timerPrecisionInNS) / float64(calibrationCalls)
 	return prngOverhead, prngOverheadActualQuantizationError
 }
 
 func addBenchmark(cfg singleAddBenchmarkConfig) (measurements []float64) {
-	prng := misc.PRNG{State: cfg.seed}
+	prng := rtcompare.NewDPRNG(cfg.seed)
 	numberOfSets := cfg.numOfSets
 	setSize := cfg.finalSetSize
 	set := make([]*set3.Set3[uint64], numberOfSets)
@@ -64,15 +64,15 @@ func addBenchmark(cfg singleAddBenchmarkConfig) (measurements []float64) {
 		for s := range numberOfSets {
 			set[s].Clear()
 		}
-		startTime := misc.SampleTime()
+		startTime := rtcompare.SampleTime()
 		for s := range numberOfSets {
 			currentSet := set[s]
 			for range setSize {
 				currentSet.Add(prng.Uint64())
 			}
 		}
-		endTime := misc.SampleTime()
-		diff := float64(misc.DiffTimeStamps(startTime, endTime))
+		endTime := rtcompare.SampleTime()
+		diff := float64(rtcompare.DiffTimeStamps(startTime, endTime))
 		// timePerRound[r] = diff - misc.GetSampleTimeRuntime() - (rngOverhead * float64(numberOfSets*setSize))
 		timePerRound[r] = diff
 	}
@@ -81,7 +81,7 @@ func addBenchmark(cfg singleAddBenchmarkConfig) (measurements []float64) {
 }
 
 func addBenchmark2(cfg singleAddBenchmarkConfig) (measurements []float64) {
-	prng := misc.PRNG{State: cfg.seed}
+	prng := rtcompare.NewDPRNG(cfg.seed)
 	numberOfSets := cfg.numOfSets
 	setSize := cfg.finalSetSize
 	set := set3.EmptyWithCapacity[uint64](uint32(cfg.initSize))
@@ -91,32 +91,32 @@ func addBenchmark2(cfg singleAddBenchmarkConfig) (measurements []float64) {
 	runtime.GC()
 	clearRounds := cfg.rounds * numberOfSets * 10
 	{
-		startTime := misc.SampleTime()
+		startTime := rtcompare.SampleTime()
 		for range clearRounds {
 			set.Clear()
 		}
-		endTime := misc.SampleTime()
-		diff := float64(misc.DiffTimeStamps(startTime, endTime))
-		avgClear = (diff - misc.GetSampleTimeRuntime()) / float64(clearRounds)
+		endTime := rtcompare.SampleTime()
+		diff := float64(rtcompare.DiffTimeStamps(startTime, endTime))
+		avgClear = diff / float64(clearRounds)
 	}
 	debug.SetGCPercent(100)
-	quantizationError := misc.GetSampleTimePrecision() / (avgClear * float64(clearRounds))
+	quantizationError := float64(rtcompare.GetSampleTimePrecision()) / (avgClear * float64(clearRounds))
 	fmt.Printf("avgClear: %.3fns (measuring runtime: %v, iterations: %d, quantization error: %e)\n", avgClear, time.Duration(int(avgClear*float64(clearRounds))), clearRounds, quantizationError)
 	debug.SetGCPercent(-1)
 	runtime.GC()
 	for r := range cfg.rounds {
 		//prng.State = cfg.seed
 		//prng.Round = 0
-		startTime := misc.SampleTime()
+		startTime := rtcompare.SampleTime()
 		for range numberOfSets {
 			set.Clear()
 			for range setSize {
 				set.Add(prng.Uint64())
 			}
 		}
-		endTime := misc.SampleTime()
-		diff := float64(misc.DiffTimeStamps(startTime, endTime))
-		timePerRoundClearAndAdd[r] = diff - misc.GetSampleTimeRuntime() - avgClear
+		endTime := rtcompare.SampleTime()
+		diff := float64(rtcompare.DiffTimeStamps(startTime, endTime))
+		timePerRoundClearAndAdd[r] = diff - avgClear
 	}
 	debug.SetGCPercent(100)
 	return timePerRoundClearAndAdd
@@ -585,8 +585,7 @@ func doLoadfactor() {
 func printSetup(p benchmarkSetup) {
 	fmt.Printf("Architecture:\t\t\t%s\n", runtime.GOARCH)
 	fmt.Printf("OS:\t\t\t\t%s\n", runtime.GOOS)
-	fmt.Printf("SampleTime() runtime:\t\t%.2fns\n", misc.GetSampleTimeRuntime())
-	fmt.Printf("Max timer precision:\t\t%.2fns\n", misc.GetSampleTimePrecision())
+	fmt.Printf("Max timer precision:\t\t%.2fns\n", rtcompare.GetSampleTimePrecision())
 	overhead, qerror := getPRNGOverhead()
 	fmt.Printf("prng.Uint64() runtime:\t\t%.3fns (quantization error: %ens)\n", overhead, qerror*overhead)
 	fmt.Printf("Exp. Add(prng.Uint64()) rt:\t%.2fns\n", p.expRuntimePerAdd)
@@ -604,7 +603,7 @@ func printSetup(p benchmarkSetup) {
 
 func calcQuantizationError(p benchmarkSetup) float64 {
 	//	quantizationError := misc.GetSampleTimePrecision() / (p.expRuntimePerAdd * float64(p.targetAddsPerRound))
-	quantizationError := misc.GetSampleTimePrecision() / float64(p.targetAddsPerRound)
+	quantizationError := float64(rtcompare.GetSampleTimePrecision()) / float64(p.targetAddsPerRound)
 	return quantizationError
 }
 
