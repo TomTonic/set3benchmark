@@ -144,7 +144,7 @@ func main() {
 
 		relativeSpeedups := []float64{-0.5, -0.4, -0.3, -0.2, -0.1, -0.05, 0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5} // relative speedups to test
 
-		results, err := rtcompare.CompareRuntimes(set3Measurements, nmsMeasurements, relativeSpeedups, 10000)
+		results, err := rtcompare.CompareSamplesDefault(set3Measurements, nmsMeasurements, relativeSpeedups)
 		if err != nil {
 			panic(err)
 		}
