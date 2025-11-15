@@ -5,18 +5,24 @@
 
 version: 2
 updates:
-  - package-ecosystem: gomod # See documentation for possible values
+  - package-ecosystem: gomod
     directory: / # Location of package manifests
     schedule:
-      interval: weekly
-    assignees:
+      interval: daily
+    reviewers:
       - TomTonic
     labels:
       - dependencies
     commit-message:
-      prefix: deps-upd
+      prefix: "deps-upd"
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: daily
+      interval: weekly
+    reviewers:
+      - TomTonic
+    labels:
+      - ci
+    commit-message:
+      prefix: "ci-upd"
