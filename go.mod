@@ -7,7 +7,7 @@ go 1.25.5
 require (
 	github.com/TomTonic/Set3 v0.4.2
 	github.com/TomTonic/rtcompare v0.5.0
-	github.com/alecthomas/kong v1.13.0
+	github.com/alecthomas/kong v1.14.0
 )
 
 require (
